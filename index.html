@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>無人機術科模擬器 - 定高懸停版</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #87CEEB; }
+        canvas { display: block; }
+        
+        /* 左上角：飛行狀態 HUD */
+        #hud-left {
+            position: absolute; top: 15px; left: 15px; color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 16px; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            pointer-events: none; background: rgba(0, 0, 0, 0.65);
+            padding: 15px; border-radius: 8px; min-width: 240px;
+        }
+        #hud-left h2 { font-size: 18px; margin: 0 0 10px 0; color: #00BFFF; border-bottom: 1px solid #555; padding-bottom: 5px; }
+        .data-row { margin-bottom: 5px; }
+        .data-val { color: #FFD700; font-weight: bold; }
+
+        /* 右上角：測驗關卡選單 */
+        #mission-container {
+            position: absolute; top: 15px; right: 15px; background: rgba(20, 10, 0, 0.85); 
+            padding: 15px; border-radius: 8px; border-left: 4px solid #FF8C00;
+            min-width: 280px; box-shadow: 0 0 10px rgba(255, 140, 0, 0.2);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+        }
+        #mission-container h2 { font-size: 16px; margin: 0 0 10px 0; color: #FF8C00; border-bottom: 1px solid #663300; padding-bottom: 5px; }
+        
+        /* 表格樣式 */
+        #mission-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        #mission-table th { background-color: rgba(255, 140, 0, 0.2); color: #FFD700; padding: 8px; text-align: left; border-bottom: 2px solid #FF8C00; }
+        #mission-table td { padding: 8px; border-bottom: 1px solid #442200; cursor: pointer; transition: background 0.2s, color 0.2s; }
+        #mission-table td.mission-item:hover { background-color: rgba(255, 140, 0, 0.4); color: #FFF; font-weight: bold; }
+        #mission-table td.empty-cell { cursor: default; }
+
+        /* 底部提示 */
+        #controls-hint {
+            position: absolute; bottom: 20px; left: 20px; color: white; background: rgba(0, 0, 0, 0.7);
+            padding: 12px; border-radius: 5px; font-family: Arial, sans-serif; line-height: 1.6; pointer-events: none;
+        }
+
+        /* 右下角俯視雷達 UI */
+        #radar-container {
+            position: absolute; bottom: 20px; right: 20px; 
+            background: rgba(20, 10, 0, 0.85); border: 2px solid #FF8C00; 
+            border-radius: 8px; pointer-events: none; padding: 10px;
+            box-shadow: 0 0 15px rgba(255, 140, 0, 0.3);
+        }
+        #radar-container h2 {
+            font-size: 14px; margin: 0 0 8px 0; color: #FF8C00; text-align: center;
+            font-family: 'Segoe UI', sans-serif; letter-spacing: 1px;
+        }
+        #radar-canvas {
+            background: rgba(30, 15, 0, 0.5); border-radius: 4px;
+            border: 1px solid #663300;
+        }
+        
+        /* FPV 十字準心 */
+        #crosshair {
+            display: none; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); pointer-events: none;
+            width: 30px; height: 30px;
+        }
+        #crosshair::before, #crosshair::after {
+            content: ''; position: absolute; background-color: rgba(0, 255, 0, 0.8);
+        }
+        #crosshair::before { top: 14px; left: 0; width: 30px; height: 2px; } 
+        #crosshair::after { top: 0; left: 14px; width: 2px; height: 30px; } 
+        
+        #labels-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .marker-label {
+            position: absolute; color: #FF0000; font-weight: bold; font-family: Arial, sans-serif;
+            font-size: 16px; text-shadow: 1px 1px 0 #FFF, -1px -1px 0 #FFF, 1px -1px 0 #FFF, -1px 1px 0 #FFF;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+    <div id="hud-left">
+        <h2>✈️ 飛行狀態</h2>
+        <div class="data-row">機體高度: <span id="altitude" class="data-val">0.00</span> m <span style="font-size: 12px; color: #aaa;">(限高 40m)</span></div>
+        <div class="data-row">X 軸座標: <span id="pos-x" class="data-val">0.00</span> m</div>
+        <div class="data-row">Z 軸座標: <span id="pos-z" class="data-val">0.00</span> m</div>
+        <div style="margin: 8px 0; border-top: 1px dashed #555;"></div>
+        <div class="data-row">視角模式: <span id="camera-mode" class="data-val" style="color: #00FF00;">站位視角 (追蹤)</span></div>
+        <div class="data-row">視角高度: <span id="cam-height" class="data-val">2.00</span> m</div>
+        <div class="data-row">目前焦距: <span id="zoom-level" class="data-val">1.5</span>x</div>
+        <div style="margin: 8px 0; border-top: 1px dashed #555;"></div>
+        <div class="data-row">環境風力: 等級 <span id="wind-status" class="data-val" style="color: #FF4500;">1</span></div>
+        <div class="data-row">動態音效: <span id="audio-status" class="data-val" style="color: #FF6347;">等待操作解鎖...</span></div>
+        <div class="data-row" style="margin-top: 10px; color: #aaa; font-size: 14px;">
+            <span id="gamepad-status" style="color: #FF6347;">未連接控制器</span>
+        </div>
+    </div>
+
+    <div id="mission-container">
+        <h2>📋 測驗關卡清單</h2>
+        <table id="mission-table">
+            <thead>
+                <tr>
+                    <th>基本</th>
+                    <th>高級</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="mission-item">四面懸停</td>
+                    <td class="mission-item">矩形航線</td>
+                </tr>
+                <tr>
+                    <td class="mission-item">八字水平圓</td>
+                    <td class="mission-item">G1儀表飛行</td>
+                </tr>
+                <tr>
+                    <td class="mission-item">側面懸停前進後退</td>
+                    <td class="mission-item">G3興趣點環繞</td>
+                </tr>
+                <tr>
+                    <td class="mission-item">五邊飛行</td>
+                    <td class="empty-cell"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="radar-container">
+        <h2>🛰️ 全域俯視雷達</h2>
+        <canvas id="radar-canvas" width="220" height="180"></canvas>
+    </div>
+
+    <div id="controls-hint">
+        ⌨️ <strong>[ 點擊畫面 / 按鍵 ]</strong> 解鎖馬達聲音<br>
+        ⌨️ <strong>[ C ]</strong> 切換視角 (站位/跟隨/FPV) | <strong>[ ↑ ] / [ ↓ ]</strong> 視角高度 / FPV仰角 | <strong>[ I ] / [ O ]</strong> 焦距縮放<br>
+        ⌨️ <strong>[ M ]</strong> 靜音開關 | <strong>[ 0 - 9 ]</strong> 設定風力強度 | <strong>[ R ]</strong> 重置位置<br>
+        🎮 <strong>自訂搖桿模式</strong>: 定高模式(中位懸停)
+    </div>
+
+    <div id="crosshair"></div>
+    <div id="labels-container"></div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); 
+        scene.fog = new THREE.Fog(0x87CEEB, 15, 150);
+
+        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.zoom = 1.5; 
+        camera.updateProjectionMatrix();
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true; 
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); 
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 20, 10); 
+        dirLight.castShadow = true; 
+        dirLight.shadow.camera.top = 20;
+        dirLight.shadow.camera.bottom = -20;
+        dirLight.shadow.camera.left = -20;
+        dirLight.shadow.camera.right = 20;
+        scene.add(dirLight);
+
+        const centerZ = -6; 
+        let operatorHeight = 2.0; 
+        const operatorPos = new THREE.Vector3(0, operatorHeight, 7); 
+        
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(150, 150), new THREE.MeshStandardMaterial({ color: 0x444444, side: THREE.DoubleSide }));
+        ground.rotation.x = Math.PI / 2; 
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        const airspaceCenterZ = -8; const airspaceWidth = 80; const airspaceDepth = 20;
+        const airspace = new THREE.Mesh(new THREE.PlaneGeometry(airspaceWidth, airspaceDepth), new THREE.MeshBasicMaterial({ color: 0xADD8E6, transparent: true, opacity: 0.3, side: THREE.DoubleSide }));
+        airspace.rotation.x = -Math.PI / 2; airspace.position.set(0, 0.005, airspaceCenterZ); scene.add(airspace);
+
+        // ==========================================
+        // ★ 工具函數與線條繪製 (保留 Mesh 加粗實體)
+        // ==========================================
+        function createThickLineSegments(points, color, thickness) {
+            const mat = new THREE.MeshBasicMaterial({ color: color });
+            const group = new THREE.Group();
+            for (let i = 0; i < points.length - 1; i++) {
+                const p1 = points[i];
+                const p2 = points[i + 1];
+                const dist = p1.distanceTo(p2);
+                if (dist < 0.001) continue;
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(thickness, 0.015, dist), mat);
+                mesh.position.copy(p1).lerp(p2, 0.5); 
+                mesh.lookAt(p2); 
+                group.add(mesh);
+            }
+            scene.add(group);
+            return group;
+        }
+
+        function createThickCircle(x, z, radius, color, thickness, isDashed = false) {
+            if (!isDashed) {
+                const geo = new THREE.RingGeometry(radius - thickness/2, radius + thickness/2, 64);
+                const mat = new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.rotation.x = -Math.PI / 2;
+                mesh.position.set(x, 0.02, z);
+                scene.add(mesh);
+            } else {
+                const points = [];
+                for (let i = 0; i <= 64; i++) {
+                    points.push(new THREE.Vector3(x + Math.cos((i/64)*Math.PI*2) * radius, 0.02, z + Math.sin((i/64)*Math.PI*2) * radius));
+                }
+                const mat = new THREE.MeshBasicMaterial({ color: color });
+                const group = new THREE.Group();
+                for (let i = 0; i < points.length - 1; i += 2) { 
+                    const p1 = points[i];
+                    const p2 = points[i + 1];
+                    const dist = p1.distanceTo(p2);
+                    if (dist < 0.001) continue;
+                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(thickness, 0.015, dist), mat);
+                    mesh.position.copy(p1).lerp(p2, 0.5);
+                    mesh.lookAt(p2);
+                    group.add(mesh);
+                }
+                scene.add(group);
+            }
+        }
+
+        const lineThickness = 0.12; 
+
+        const hw = airspaceWidth / 2; const hd = airspaceDepth / 2;
+        const airspacePoints = [
+            new THREE.Vector3(0 - hw, 0.015, airspaceCenterZ - hd), new THREE.Vector3(0 + hw, 0.015, airspaceCenterZ - hd),
+            new THREE.Vector3(0 + hw, 0.015, airspaceCenterZ + hd), new THREE.Vector3(0 - hw, 0.015, airspaceCenterZ + hd),
+            new THREE.Vector3(0 - hw, 0.015, airspaceCenterZ - hd)
+        ];
+        createThickLineSegments(airspacePoints, 0x00FFFF, lineThickness);
+
+        const rectOuterPts = [
+            new THREE.Vector3(-8, 0.02, 2), new THREE.Vector3(8, 0.02, 2),
+            new THREE.Vector3(8, 0.02, -14), new THREE.Vector3(-8, 0.02, -14), new THREE.Vector3(-8, 0.02, 2)
+        ];
+        createThickLineSegments(rectOuterPts, 0xFFFF00, lineThickness);
+        
+        const rectInnerPts = [
+            new THREE.Vector3(-4, 0.02, -2), new THREE.Vector3(4, 0.02, -2),
+            new THREE.Vector3(4, 0.02, -10), new THREE.Vector3(-4, 0.02, -10), new THREE.Vector3(-4, 0.02, -2)
+        ];
+        createThickLineSegments(rectInnerPts, 0xFFFF00, lineThickness);
+
+        const runwayPts = [
+            new THREE.Vector3(-40, 0.02, 2), new THREE.Vector3(40, 0.02, 2),
+            new THREE.Vector3(40, 0.02, -2), new THREE.Vector3(-40, 0.02, -2), new THREE.Vector3(-40, 0.02, 2)
+        ];
+        createThickLineSegments(runwayPts, 0xFFFFFF, lineThickness + 0.05);
+
+        const centerLeftX = -6, centerRightX = 6, R = 6, innerR_poi = 4, outerR_poi = 8;
+        const neonGreen = 0x39FF14;
+        createThickCircle(centerLeftX, centerZ, outerR_poi, neonGreen, lineThickness); 
+        createThickCircle(centerLeftX, centerZ, innerR_poi, neonGreen, lineThickness); 
+        createThickCircle(centerLeftX, centerZ, R, 0x00BFFF, lineThickness, true); 
+        createThickCircle(centerRightX, centerZ, outerR_poi, neonGreen, lineThickness); 
+        createThickCircle(centerRightX, centerZ, innerR_poi, neonGreen, lineThickness); 
+        createThickCircle(centerRightX, centerZ, R, 0x00BFFF, lineThickness, true);
+        createThickCircle(0, 0, 1.0, neonGreen, lineThickness);
+
+        // ==========================================
+        // ★ 空中五邊航道
+        // ==========================================
+        const trackShape = new THREE.Shape();
+        const outerR = 8; 
+        
+        trackShape.moveTo(-40 + outerR, -2);
+        trackShape.lineTo(40 - outerR, -2);
+        trackShape.quadraticCurveTo(40, -2, 40, -2 + outerR);
+        trackShape.lineTo(40, 18 - outerR);
+        trackShape.quadraticCurveTo(40, 18, 40 - outerR, 18);
+        trackShape.lineTo(-40 + outerR, 18);
+        trackShape.quadraticCurveTo(-40, 18, -40, 18 - outerR);
+        trackShape.lineTo(-40, -2 + outerR);
+        trackShape.quadraticCurveTo(-40, -2, -40 + outerR, -2);
+
+        const holePath = new THREE.Path();
+        const innerR = 4; 
+        holePath.moveTo(-36 + innerR, 2);
+        holePath.lineTo(36 - innerR, 2);
+        holePath.quadraticCurveTo(36, 2, 36, 2 + innerR);
+        holePath.lineTo(36, 14 - innerR);
+        holePath.quadraticCurveTo(36, 14, 36 - innerR, 14);
+        holePath.lineTo(-36 + innerR, 14);
+        holePath.quadraticCurveTo(-36, 14, -36, 14 - innerR);
+        holePath.lineTo(-36, 2 + innerR);
+        holePath.quadraticCurveTo(-36, 2, -36 + innerR, 2);
+        
+        trackShape.holes.push(holePath);
+
+        const extrudeSettings = { depth: 4, bevelEnabled: false, curveSegments: 16 };
+        const extrudeGeo = new THREE.ExtrudeGeometry(trackShape, extrudeSettings);
+        extrudeGeo.rotateX(-Math.PI / 2); 
+        
+        const aerialMat = new THREE.MeshStandardMaterial({ 
+            color: 0x00FFFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false
+        });
+        
+        const aerialTrack = new THREE.Mesh(extrudeGeo, aerialMat);
+        aerialTrack.position.y = 16;
+        
+        const aerialEdgesMat = new THREE.MeshBasicMaterial({ color: 0x00FFFF, transparent: true, opacity: 0.8 });
+        
+        function createAerialThickEdges(points, heightOffset) {
+            const group = new THREE.Group();
+            const vec3s = points.map(p => new THREE.Vector3(p.x, heightOffset, -p.y));
+            if(vec3s.length > 0 && vec3s[0].distanceTo(vec3s[vec3s.length-1]) > 0.001) {
+                vec3s.push(vec3s[0].clone());
+            }
+            for (let i = 0; i < vec3s.length - 1; i++) {
+                const p1 = vec3s[i];
+                const p2 = vec3s[i + 1];
+                const dist = p1.distanceTo(p2);
+                if (dist < 0.001) continue;
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, dist), aerialEdgesMat);
+                mesh.position.copy(p1).lerp(p2, 0.5);
+                mesh.lookAt(p2);
+                group.add(mesh);
+            }
+            return group;
+        }
+
+        const outerShapePoints = trackShape.getPoints(32);
+        const innerShapePoints = holePath.getPoints(32);
+
+        aerialTrack.add(createAerialThickEdges(outerShapePoints, 0));
+        aerialTrack.add(createAerialThickEdges(outerShapePoints, 4));
+        aerialTrack.add(createAerialThickEdges(innerShapePoints, 0));
+        aerialTrack.add(createAerialThickEdges(innerShapePoints, 4));
+
+        scene.add(aerialTrack);
+
+        // ==========================================
+        // ★ 興趣點與標籤
+        // ==========================================
+        const testArea = new THREE.Mesh(new THREE.PlaneGeometry(26, 14), new THREE.MeshStandardMaterial({ color: 0x666666, side: THREE.DoubleSide }));
+        testArea.rotation.x = -Math.PI / 2; testArea.position.set(0, 0.01, centerZ); 
+        testArea.receiveShadow = true;
+        scene.add(testArea);
+
+        const labels = []; const labelsContainer = document.getElementById('labels-container'); const coneHeight = 1.0;
+        const coneMat = new THREE.MeshStandardMaterial({ color: 0xFF6600, roughness: 0.6, metalness: 0.1 });
+        
+        function createCone(x, z, labelText) {
+            const cone = new THREE.Mesh(new THREE.ConeGeometry(0.2, coneHeight, 16), coneMat);
+            cone.position.set(x, coneHeight / 2, z); 
+            cone.castShadow = true; 
+            scene.add(cone);
+            
+            const div = document.createElement('div'); div.className = 'marker-label'; div.innerText = labelText;
+            labelsContainer.appendChild(div); labels.push({ element: div, pos: new THREE.Vector3(x, coneHeight + 0.3, z) });
+        }
+        createCone(centerLeftX, centerZ - R, 'P1'); createCone(centerLeftX - R, centerZ, 'P2'); createCone(centerLeftX, centerZ + R, 'P3'); 
+        createCone(0, centerZ, 'P4'); createCone(centerRightX, centerZ - R, 'P5'); createCone(centerRightX + R, centerZ, 'P6'); createCone(centerRightX, centerZ + R, 'P7');
+
+        function createPOISurface(x, z, labelText) {
+            const poiGeo = new THREE.CircleGeometry(1.5, 32); 
+            const poiMat = new THREE.MeshBasicMaterial({ color: 0xFF0000, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
+            const poiMesh = new THREE.Mesh(poiGeo, poiMat);
+            poiMesh.rotation.x = -Math.PI / 2;
+            poiMesh.position.set(x, 0.025, z); 
+            scene.add(poiMesh);
+            
+            const div = document.createElement('div'); div.className = 'marker-label'; div.innerText = labelText;
+            labelsContainer.appendChild(div); labels.push({ element: div, pos: new THREE.Vector3(x, 0.5, z) });
+        }
+        createPOISurface(-15, -15, '興趣點 A');
+        createPOISurface(15, -15, '興趣點 B');
+
+        const hPadGroup = new THREE.Group(); hPadGroup.position.set(0, 0.015, 0);
+        const pad = new THREE.Mesh(new THREE.CircleGeometry(1.0, 32), new THREE.MeshStandardMaterial({ color: 0xDDDDDD })); 
+        pad.rotation.x = -Math.PI / 2; pad.receiveShadow = true; hPadGroup.add(pad);
+        
+        const hMat = new THREE.MeshStandardMaterial({ color: 0x333333, emissive: 0x000000 });
+        const hLeft = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 1.0), hMat); hLeft.rotation.x = -Math.PI/2; hLeft.position.set(-0.4, 0.01, 0);
+        const hRight = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 1.0), hMat); hRight.rotation.x = -Math.PI/2; hRight.position.set(0.4, 0.01, 0);
+        const hCenter = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.2), hMat); hCenter.rotation.x = -Math.PI/2; hCenter.position.set(0, 0.01, 0);
+        hPadGroup.add(hLeft, hRight, hCenter); scene.add(hPadGroup);
+
+        // ==========================================
+        // ★ 無人機模型
+        // ==========================================
+        const droneGroup = new THREE.Group(); const droneHeight = 0.5; const droneYOffset = droneHeight / 2;
+        const droneTiltGroup = new THREE.Group(); droneGroup.add(droneTiltGroup);
+        const propellers = []; 
+
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.3, roughness: 0.5 });
+        
+        const centerBody = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.35), bodyMat); 
+        centerBody.castShadow = true; 
+        droneTiltGroup.add(centerBody);
+        
+        const noseGeo = new THREE.ConeGeometry(0.08, 0.15, 16);
+        const nose = new THREE.Mesh(noseGeo, bodyMat);
+        nose.rotation.x = -Math.PI / 2; 
+        nose.position.set(0, 0, -0.25);
+        nose.castShadow = true;
+        droneTiltGroup.add(nose);
+
+        const tailFinGeo = new THREE.BoxGeometry(0.02, 0.15, 0.12);
+        const tailFin = new THREE.Mesh(tailFinGeo, bodyMat);
+        tailFin.position.set(0, 0.1, 0.12);
+        tailFin.castShadow = true;
+        droneTiltGroup.add(tailFin);
+        
+        const frontCam = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.08), new THREE.MeshStandardMaterial({ color: 0xFF0000 }));
+        frontCam.position.set(0, -0.05, -0.28); 
+        frontCam.castShadow = true; 
+        droneTiltGroup.add(frontCam);
+
+        const armGeo = new THREE.BoxGeometry(0.04, 0.03, 1.0); 
+        const armMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+        const arm1 = new THREE.Mesh(armGeo, armMat); arm1.rotation.y = Math.PI / 4; arm1.castShadow = true; droneTiltGroup.add(arm1);
+        const arm2 = new THREE.Mesh(armGeo, armMat); arm2.rotation.y = -Math.PI / 4; arm2.castShadow = true; droneTiltGroup.add(arm2);
+
+        const motorGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.06, 16); 
+        const motorMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
+        const propGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.01, 16);
+        
+        const propMatFront = new THREE.MeshBasicMaterial({ color: 0xFF4444, transparent: true, opacity: 0.6 }); 
+        const propMatRear = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.6 }); 
+
+        const motorOffset = 0.5 * Math.cos(Math.PI / 4);
+        const positions = [ 
+            { x: -motorOffset, z: -motorOffset, isFront: true },  
+            { x: motorOffset, z: -motorOffset, isFront: true },   
+            { x: -motorOffset, z: motorOffset, isFront: false },  
+            { x: motorOffset, z: motorOffset, isFront: false }    
+        ];
+        
+        positions.forEach(pos => {
+            const motor = new THREE.Mesh(motorGeo, motorMat); 
+            motor.position.set(pos.x, 0.03, pos.z); 
+            motor.castShadow = true; 
+            droneTiltGroup.add(motor);
+            
+            const prop = new THREE.Mesh(propGeo, pos.isFront ? propMatFront : propMatRear); 
+            prop.position.set(pos.x, 0.06, pos.z); 
+            droneTiltGroup.add(prop); 
+            propellers.push(prop);
+        });
+
+        const skidGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.4, 8); 
+        const skidMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+        const skid1 = new THREE.Mesh(skidGeo, skidMat); skid1.rotation.x = Math.PI / 2; skid1.position.set(-0.15, -0.23, 0); skid1.castShadow = true; droneTiltGroup.add(skid1);
+        const skid2 = new THREE.Mesh(skidGeo, skidMat); skid2.rotation.x = Math.PI / 2; skid2.position.set(0.15, -0.23, 0); skid2.castShadow = true; droneTiltGroup.add(skid2);
+        const legGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.23, 8);
+        const legsPos = [ { x: -0.15, z: -0.1 }, { x: -0.15, z: 0.1 }, { x: 0.15, z: -0.1 }, { x: 0.15, z: 0.1 } ];
+        legsPos.forEach(pos => { const leg = new THREE.Mesh(legGeo, skidMat); leg.position.set(pos.x, -0.115, pos.z); leg.castShadow = true; droneTiltGroup.add(leg); });
+
+        droneGroup.position.set(0, droneYOffset, 0); scene.add(droneGroup);
+
+        const shadowGroup = new THREE.Group();
+        const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.5 });
+        const shadowCircle = new THREE.Mesh(new THREE.CircleGeometry(0.25, 32), shadowMat); 
+        shadowCircle.rotation.x = -Math.PI / 2;
+        shadowGroup.add(shadowCircle);
+        shadowGroup.position.y = 0.025; 
+        scene.add(shadowGroup);
+
+        // ==========================================
+        // ★ Audio 與 飛行核心控制
+        // ==========================================
+        let audioCtx = null;
+        let masterGain = null;
+        let filterNode = null;
+        let motorOscillators = [];
+        let isAudioInitialized = false;
+        let isAudioMuted = false;
+        const audioStatusUI = document.getElementById('audio-status');
+
+        function initAudioEngine() {
+            if (isAudioInitialized) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0; 
+            masterGain.connect(audioCtx.destination);
+            filterNode = audioCtx.createBiquadFilter();
+            filterNode.type = 'lowpass';
+            filterNode.frequency.value = 600; 
+            filterNode.connect(masterGain);
+            for (let i = 0; i < 4; i++) {
+                let osc = audioCtx.createOscillator();
+                osc.type = 'triangle'; 
+                osc.frequency.value = 50 + (i * 2); 
+                osc.connect(filterNode);
+                osc.start();
+                motorOscillators.push(osc);
+            }
+            isAudioInitialized = true;
+            audioStatusUI.innerText = "ON (動態音量)";
+            audioStatusUI.style.color = "#00FF00";
+        }
+
+        function unlockAudio() {
+            if (!isAudioInitialized) initAudioEngine();
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        window.addEventListener('keydown', unlockAudio);
+        window.addEventListener('mousedown', unlockAudio);
+        window.addEventListener('touchstart', unlockAudio);
+
+        let cameraMode = 0; 
+        const cameraModeNames = ["站位視角 (追蹤)", "第三人稱跟隨", "第一人稱 (FPV)"];
+        let windStrength = 1; 
+        let fpvPitchAngle = 0; 
+        
+        const cameraModeUI = document.getElementById('camera-mode');
+        const zoomLevelUI = document.getElementById('zoom-level');
+        const camHeightUI = document.getElementById('cam-height');
+        const windStatusUI = document.getElementById('wind-status');
+        const crosshairUI = document.getElementById('crosshair');
+
+        window.addEventListener('keydown', (e) => {
+            const keyL = e.key.toLowerCase();
+            
+            if (keyL === 'r') {
+                droneGroup.position.set(0, droneYOffset, 0);
+                droneGroup.rotation.set(0, 0, 0);
+                currentVelocity = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
+            }
+
+            if (keyL === 'c') { 
+                cameraMode = (cameraMode + 1) % 3;
+                cameraModeUI.innerText = cameraModeNames[cameraMode];
+                
+                if (cameraMode === 2) {
+                    camera.zoom = 1.0;
+                    crosshairUI.style.display = 'block'; 
+                } else { 
+                    camera.zoom = 1.5;
+                    crosshairUI.style.display = 'none';
+                }
+                camera.updateProjectionMatrix();
+                zoomLevelUI.innerText = camera.zoom.toFixed(1);
+            }
+            if (keyL === 'i') { camera.zoom = Math.min(3.0, camera.zoom + 0.1); camera.updateProjectionMatrix(); zoomLevelUI.innerText = camera.zoom.toFixed(1); }
+            if (keyL === 'o') { camera.zoom = Math.max(0.3, camera.zoom - 0.1); camera.updateProjectionMatrix(); zoomLevelUI.innerText = camera.zoom.toFixed(1); }
+            
+            if (e.key === 'ArrowUp') { 
+                if (cameraMode === 2) {
+                    fpvPitchAngle = Math.min(Math.PI / 3, fpvPitchAngle + 0.05); 
+                } else {
+                    operatorHeight = Math.min(10.0, operatorHeight + 0.2); operatorPos.y = operatorHeight; camHeightUI.innerText = operatorHeight.toFixed(2); 
+                }
+            }
+            if (e.key === 'ArrowDown') { 
+                if (cameraMode === 2) {
+                    fpvPitchAngle = Math.max(-Math.PI / 3, fpvPitchAngle - 0.05); 
+                } else {
+                    operatorHeight = Math.max(0.2, operatorHeight - 0.2); operatorPos.y = operatorHeight; camHeightUI.innerText = operatorHeight.toFixed(2); 
+                }
+            }
+            
+            if (keyL === 'm') {
+                isAudioMuted = !isAudioMuted;
+                if (isAudioMuted && masterGain) masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+                audioStatusUI.innerText = isAudioMuted ? "OFF" : "ON (動態音量)";
+                audioStatusUI.style.color = isAudioMuted ? "#FF6347" : "#00FF00";
+            }
+            if (e.key >= '0' && e.key <= '9') {
+                windStrength = parseInt(e.key); windStatusUI.innerText = windStrength;
+                windStatusUI.style.color = windStrength === 0 ? "#00FF00" : "#FF4500";
+            }
+        });
+
+        // ==========================================
+        // ★ 核心物理參數調整：降速、定高模式
+        // ==========================================
+        const droneSpeed = 0.11;       
+        const turnSpeed = 0.07;        
+        const responsiveness = 0.07;  
+        const maxTiltAngle = 0.3;      
+        
+        let currentVelocity = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
+        let windTimer = 0; let targetWindX = 0; let targetWindZ = 0; let targetWindY = 0; 
+        let currentWindX = 0; let currentWindZ = 0; let currentWindY = 0;
+
+        const altitudeUI = document.getElementById('altitude');
+        const posXUI = document.getElementById('pos-x');
+        const posZUI = document.getElementById('pos-z');
+        const gamepadStatusUI = document.getElementById('gamepad-status');
+        const tempVector = new THREE.Vector3();
+
+        const radarCanvas = document.getElementById('radar-canvas');
+        const radarCtx = radarCanvas.getContext('2d');
+        const rW = radarCanvas.width;
+        const rH = radarCanvas.height;
+        const radarScale = rW / 45; 
+        function mapX(worldX) { return (rW / 2) + (worldX * radarScale); }
+        function mapZ(worldZ) { return (rH / 2) + ((worldZ - centerZ) * radarScale); } 
+
+        function updateRadar() {
+            radarCtx.clearRect(0, 0, rW, rH);
+            radarCtx.strokeStyle = 'rgba(173, 216, 230, 0.6)';
+            radarCtx.lineWidth = 3; 
+            radarCtx.beginPath();
+            if(radarCtx.roundRect) {
+                radarCtx.roundRect(mapX(-40), mapZ(-18), 80 * radarScale, 20 * radarScale, 8 * radarScale);
+            } else {
+                radarCtx.strokeRect(mapX(-40), mapZ(-18), 80 * radarScale, 20 * radarScale);
+            }
+            radarCtx.stroke();
+            radarCtx.lineWidth = 2.5;
+            radarCtx.beginPath(); radarCtx.arc(mapX(centerLeftX), mapZ(centerZ), outerR_poi * radarScale, 0, Math.PI * 2); radarCtx.arc(mapX(centerRightX), mapZ(centerZ), outerR_poi * radarScale, 0, Math.PI * 2); radarCtx.strokeStyle = 'rgba(57, 255, 20, 0.8)'; radarCtx.stroke(); 
+            radarCtx.beginPath(); radarCtx.arc(mapX(centerLeftX), mapZ(centerZ), innerR_poi * radarScale, 0, Math.PI * 2); radarCtx.arc(mapX(centerRightX), mapZ(centerZ), innerR_poi * radarScale, 0, Math.PI * 2); radarCtx.strokeStyle = 'rgba(57, 255, 20, 0.8)'; radarCtx.stroke(); 
+            radarCtx.beginPath(); radarCtx.arc(mapX(centerLeftX), mapZ(centerZ), R * radarScale, 0, Math.PI * 2); radarCtx.arc(mapX(centerRightX), mapZ(centerZ), R * radarScale, 0, Math.PI * 2); radarCtx.strokeStyle = 'rgba(0, 191, 255, 0.8)'; radarCtx.stroke();
+            radarCtx.fillStyle = 'rgba(200, 200, 200, 0.8)'; radarCtx.beginPath(); radarCtx.arc(mapX(0), mapZ(0), 1.0 * radarScale, 0, Math.PI * 2); radarCtx.fill();
+            const dx = mapX(droneGroup.position.x); const dy = mapZ(droneGroup.position.z); const yaw = droneGroup.rotation.y;
+            radarCtx.save(); radarCtx.translate(dx, dy); radarCtx.rotate(-yaw); 
+            radarCtx.fillStyle = '#00FF00'; radarCtx.beginPath(); radarCtx.moveTo(0, -8); radarCtx.lineTo(6, 6); radarCtx.lineTo(0, 3); radarCtx.lineTo(-6, 6); radarCtx.closePath(); radarCtx.fill();
+            radarCtx.restore();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const gamepads = navigator.getGamepads();
+            let pad = Array.from(gamepads).find(p => p !== null);
+            let targetThrottle = 0, targetYaw = 0, targetPitch = 0, targetRoll = 0;
+
+            if (pad) {
+                if (pad.buttons.some(b => b.pressed)) unlockAudio();
+                gamepadStatusUI.innerText = `🎮 ${pad.id.substring(0, 20)}`;
+                gamepadStatusUI.style.color = "#00FF00";
+
+                const deadzone = 0.08; 
+                let rawYaw = pad.axes[3] || 0; let rawThrottle = (pad.axes[2] || 0); 
+                let rawRoll = pad.axes[0] || 0; let rawPitch = (pad.axes[1] || 0);    
+
+                targetYaw = Math.abs(rawYaw) > deadzone ? rawYaw : 0; targetThrottle = Math.abs(rawThrottle) > deadzone ? rawThrottle : 0;
+                targetRoll = Math.abs(rawRoll) > deadzone ? rawRoll : 0; targetPitch = Math.abs(rawPitch) > deadzone ? rawPitch : 0;
+            } else {
+                gamepadStatusUI.innerText = "未連接控制器"; gamepadStatusUI.style.color = "#FF6347";
+            }
+
+            currentVelocity.throttle = THREE.MathUtils.lerp(currentVelocity.throttle, targetThrottle, responsiveness);
+            currentVelocity.yaw = THREE.MathUtils.lerp(currentVelocity.yaw, targetYaw, responsiveness);
+            currentVelocity.roll = THREE.MathUtils.lerp(currentVelocity.roll, targetRoll, responsiveness);
+            currentVelocity.pitch = THREE.MathUtils.lerp(currentVelocity.pitch, targetPitch, responsiveness);
+
+            // ★ 垂直運動核心修改：定高模式 (Altitude Hold)
+            // 廢除持續扣減重力的設計，讓搖桿的值直接轉換為升降「速度」
+            // 當搖桿回中 (throttle 為 0) 時，verticalVelocity 也為 0，實現懸停！
+            const climbSpeed = 0.04; 
+            let verticalVelocity = currentVelocity.throttle * climbSpeed;
+
+            if (droneGroup.position.y <= droneYOffset + 0.001) {
+                currentVelocity.yaw = 0; currentVelocity.roll = 0; currentVelocity.pitch = 0;
+                if (verticalVelocity < 0) verticalVelocity = 0;
+            }
+
+            windTimer -= 1;
+            if (windTimer <= 0) {
+                windTimer = 60 + Math.random() * 60;
+                if (windStrength > 0) {
+                    const angle = Math.floor(Math.random() * 8) * (Math.PI / 4);
+                    const force = (windStrength * 0.0028); 
+                    targetWindX = Math.cos(angle) * force; targetWindZ = Math.sin(angle) * force;
+                    const verticalDirection = Math.random() > 0.5 ? 1 : -1;
+                    targetWindY = verticalDirection * (force / 2);
+                } else { targetWindX = 0; targetWindZ = 0; targetWindY = 0; }
+            }
+            currentWindX = THREE.MathUtils.lerp(currentWindX, targetWindX, 0.02);
+            currentWindZ = THREE.MathUtils.lerp(currentWindZ, targetWindZ, 0.02);
+            currentWindY = THREE.MathUtils.lerp(currentWindY, targetWindY, 0.02);
+
+            if (Math.abs(currentVelocity.roll) > 0.001 || Math.abs(currentVelocity.pitch) > 0.001) {
+                droneGroup.translateX(currentVelocity.roll * droneSpeed); droneGroup.translateZ(-currentVelocity.pitch * droneSpeed); 
+            }
+            
+            if (droneGroup.position.y > droneYOffset + 0.05) {
+                droneGroup.position.x += currentWindX; droneGroup.position.y += currentWindY + verticalVelocity; droneGroup.position.z += currentWindZ;
+            } else { droneGroup.position.y += verticalVelocity; }
+
+            if (Math.abs(currentVelocity.yaw) > 0.001) droneGroup.rotation.y -= currentVelocity.yaw * turnSpeed;
+            if (droneGroup.position.y < droneYOffset) droneGroup.position.y = droneYOffset;
+
+            const maxAltitude = 40.0;
+            if (droneGroup.position.y > maxAltitude + droneYOffset) droneGroup.position.y = maxAltitude + droneYOffset;
+
+            droneTiltGroup.rotation.x = -currentVelocity.pitch * maxTiltAngle;
+            droneTiltGroup.rotation.z = -currentVelocity.roll * maxTiltAngle;
+
+            shadowGroup.position.x = droneGroup.position.x; shadowGroup.position.z = droneGroup.position.z;
+
+            const distToHPad = Math.hypot(droneGroup.position.x, droneGroup.position.z);
+            if (distToHPad <= 1.0) { hMat.color.setHex(0x39FF14); hMat.emissive.setHex(0x39FF14); hMat.emissiveIntensity = 0.6; } 
+            else { hMat.color.setHex(0x333333); hMat.emissive.setHex(0x000000); hMat.emissiveIntensity = 0; }
+
+            const isInsideAerialTrack = (
+                droneGroup.position.y >= 16 && droneGroup.position.y <= 20 &&
+                droneGroup.position.x >= -40 && droneGroup.position.x <= 40 &&
+                droneGroup.position.z <= 2 && droneGroup.position.z >= -18 &&
+                !(droneGroup.position.x > -36 && droneGroup.position.x < 36 && droneGroup.position.z < -2 && droneGroup.position.z > -14)
+            );
+
+            if (isInsideAerialTrack) {
+                aerialMat.color.setHex(0x39FF14); aerialMat.opacity = 0.45; aerialEdgesMat.color.setHex(0x39FF14);  
+            } else {
+                aerialMat.color.setHex(0x00FFFF); aerialMat.opacity = 0.25; aerialEdgesMat.color.setHex(0x00FFFF);
+            }
+
+            if (isAudioInitialized && !isAudioMuted && audioCtx.state === 'running') {
+                const motorLoad = Math.abs(currentVelocity.throttle) + (Math.abs(currentVelocity.pitch) + Math.abs(currentVelocity.roll) + Math.abs(currentVelocity.yaw)) * 0.3;
+                const targetFreq = 50 + (motorLoad * 80);
+                motorOscillators.forEach((osc, index) => { osc.frequency.setTargetAtTime(targetFreq + (index * 2), audioCtx.currentTime, 0.1); });
+                const distToCamera = camera.position.distanceTo(droneGroup.position);
+                let distanceAttenuation = Math.min(7.0 / Math.max(distToCamera, 2.0), 1.5);
+                let targetVolume = Math.min(((droneGroup.position.y <= droneYOffset + 0.01 ? 0.1 : 0.3) + (Math.abs(currentVelocity.throttle) * 0.6)) * distanceAttenuation, 1.2); 
+                masterGain.gain.setTargetAtTime(targetVolume, audioCtx.currentTime, 0.1);
+            }
+
+            const spinSpeed = 0.1 + Math.abs(currentVelocity.throttle) * 0.8;
+            propellers.forEach(p => p.rotation.y -= spinSpeed);
+
+            altitudeUI.innerText = (droneGroup.position.y - droneYOffset).toFixed(2);
+            posXUI.innerText = droneGroup.position.x.toFixed(2); posZUI.innerText = droneGroup.position.z.toFixed(2);
+
+            updateRadar();
+
+            if (cameraMode === 0) {
+                camera.position.copy(operatorPos); camera.lookAt(droneGroup.position);
+            } 
+            else if (cameraMode === 1) {
+                const relativeCameraOffset = new THREE.Vector3(0, 4, 6);
+                const cameraOffset = relativeCameraOffset.applyMatrix4(droneGroup.matrixWorld);
+                camera.position.lerp(cameraOffset, 0.1); camera.lookAt(droneGroup.position);
+            }
+            else if (cameraMode === 2) {
+                const relativeCameraOffset = new THREE.Vector3(0, -0.05, -0.28); 
+                const cameraOffset = relativeCameraOffset.applyMatrix4(droneTiltGroup.matrixWorld);
+                camera.position.copy(cameraOffset);
+                const targetOffset = new THREE.Vector3(0, Math.sin(fpvPitchAngle) * 10, -Math.cos(fpvPitchAngle) * 10);
+                const lookAtTarget = targetOffset.applyMatrix4(droneTiltGroup.matrixWorld);
+                camera.lookAt(lookAtTarget);
+            }
+
+            labels.forEach(label => {
+                tempVector.copy(label.pos); tempVector.project(camera);
+                if (tempVector.z < 1 && camera.position.distanceTo(label.pos) > 1.0) {
+                    const x = (tempVector.x * .5 + .5) * window.innerWidth; const y = (tempVector.y * -.5 + .5) * window.innerHeight;
+                    label.element.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
+                    label.element.style.display = 'block';
+                } else { label.element.style.display = 'none'; }
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
