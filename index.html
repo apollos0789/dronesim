@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>台續無人機模擬器</title>
+    <title>無人機術科模擬器 - 完整修復版</title>
+    <link rel="icon" href="LOGO.png">
     <style>
         body { margin: 0; overflow: hidden; background-color: #87CEEB; }
         canvas { display: block; }
@@ -72,20 +73,10 @@
             position: absolute; top: 8%; left: 50%; transform: translateX(-50%);
             color: #FFF; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,0,0,1);
             background: rgba(0,0,0,0.75); padding: 20px 40px; border-radius: 10px;
-            border: 2px solid #00FF00; text-align: center; display: none; z-index: 100;
+            border: 2px solid #00FF00; text-align: center; display: none; z-index: 200;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; pointer-events: none;
             min-width: 450px;
         }
-
-        /* 關卡結算面板 */
-        #level-end-modal {
-            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(20, 20, 25, 0.95); border: 2px solid #39FF14; border-radius: 10px;
-            padding: 30px; color: white; font-family: 'Segoe UI', sans-serif; z-index: 200; text-align: center; min-width: 320px;
-            pointer-events: auto;
-        }
-        #level-end-modal h2 { margin-top: 0; color: #39FF14; border-bottom: 1px solid #555; padding-bottom: 10px; font-size: 24px;}
-        #end-buttons-container { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
         
         #labels-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
         .marker-label { position: absolute; color: #FF0000; font-weight: bold; font-family: Arial, sans-serif; font-size: 16px; text-shadow: 1px 1px 0 #FFF, -1px -1px 0 #FFF, 1px -1px 0 #FFF, -1px 1px 0 #FFF; transform: translate(-50%, -50%); }
@@ -157,7 +148,6 @@
     </div>
 
     <div id="center-message">請選擇關卡並按下開始</div>
-    <div id="level-end-modal"><h2>✅ 測驗完成</h2><p style="font-size: 16px; margin-bottom: 5px;">請選擇下一步驟：</p><div id="end-buttons-container"></div></div>
     <div id="crosshair"></div>
 
     <div id="bottom-panels">
@@ -172,7 +162,7 @@
     </div>
 
     <div id="controls-hint">
-        ⌨️ <strong>[ 空白鍵 ]</strong> 確認過關呼叫選單 / 任務流程觸發鍵<br>
+        ⌨️ <strong>[ 空白鍵 ]</strong> 任務流程觸發鍵<br>
         ⌨️ <strong>[ C ]</strong> 切換視角 | <strong>[ ↑ ] / [ ↓ ]</strong> 視角高度 | <strong>[ I ] / [ O ] 或 [ 滾輪 ]</strong> 焦距縮放<br>
         ⌨️ <strong>[ A ] / [ Z ]</strong> 調整雲台仰俯角 (FPV模式下使用)<br>
         ⌨️ <strong>[ M ]</strong> 靜音開關 | <strong>[ 0 - 9 ]</strong> 設定風力 | <strong>[ R ]</strong> 重置位置<br>
@@ -205,7 +195,83 @@
         function createTree(x, z) { const height = 13 + Math.random() * 2; const leafH = height - 2; const tree = new THREE.Group(); const trunk = new THREE.Mesh(trunkGeo, trunkMat); trunk.position.y = 1.5; trunk.castShadow = true; trunk.receiveShadow = true; tree.add(trunk); const leaves = new THREE.Mesh(leavesGeo, leavesMat); leaves.position.y = 2 + leafH / 2; leaves.scale.set(1, leafH / 12, 1); leaves.castShadow = true; leaves.receiveShadow = true; tree.add(leaves); tree.position.set(x, 0, z); tree.rotation.y = Math.random() * Math.PI * 2; treeGroup.add(tree); }
         for (let x = -44; x <= 44; x += 4) { createTree(x + (Math.random()-0.5), 16 + (Math.random()*1.5)); createTree(x + (Math.random()-0.5), -22 - (Math.random()*1.5)); }
         for (let z = -22; z <= 16; z += 4) { createTree(-44 - (Math.random()*1.5), z + (Math.random()-0.5)); createTree(44 + (Math.random()*1.5), z + (Math.random()-0.5)); } scene.add(treeGroup);
-        const airspace = new THREE.Mesh(new THREE.PlaneGeometry(80, 20), new THREE.MeshBasicMaterial({ color: 0xADD8E6, transparent: true, opacity: 0.2, side: THREE.DoubleSide })); airspace.rotation.x = -Math.PI / 2; airspace.position.set(0, 0.005, -8); scene.add(airspace);
+        
+        // =======================================================
+        // --- 彩蛋：木頭看板 ---
+        // =======================================================
+        function createEasterEggSign() {
+            // 使用 Canvas 繪製看板材質與文字
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            
+            // 繪製木板底色與邊框
+            ctx.fillStyle = '#5c4033'; // 深木頭色
+            ctx.fillRect(0, 0, 512, 256);
+            ctx.strokeStyle = '#3e2723'; // 更深的邊框
+            ctx.lineWidth = 15;
+            ctx.strokeRect(0, 0, 512, 256);
+            
+            // 繪製文字
+            ctx.fillStyle = '#FFD700'; // 金黃色文字
+            ctx.font = 'bold 30px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('製作人 台續小吳', 256, 75);
+            ctx.fillText('協作 Gemini', 256, 140);
+            ctx.fillText('謝謝王姐加薪', 256, 205);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.colorSpace = THREE.SRGBColorSpace;
+            
+            // 建立看板幾何體
+            const boardGeo = new THREE.BoxGeometry(1, 0.5, 0.1);
+            const boardMat = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.9 });
+            const board = new THREE.Mesh(boardGeo, boardMat);
+            board.position.set(0, 0.5, 0);
+            board.castShadow = true;
+
+            // 建立支撐柱
+            const poleGeo = new THREE.CylinderGeometry(0.08, 0.08, 1, 8);
+            const poleMat = new THREE.MeshStandardMaterial({ color: 0x3e2723 });
+            const pole1 = new THREE.Mesh(poleGeo, poleMat);
+            pole1.position.set(-0.5, 0.5, 0); pole1.castShadow = true;
+            const pole2 = new THREE.Mesh(poleGeo, poleMat);
+            pole2.position.set(0.5, 0.5, 0); pole2.castShadow = true;
+
+            // 組合
+            const signGroup = new THREE.Group();
+            signGroup.add(board); signGroup.add(pole1); signGroup.add(pole2);
+            
+            // 放置位置：H是(0,0)，面對P4是負Z軸。左後方為 (-X, +Z)
+            // 放置在邊界樹林前方，座標大約 X: -35, Z: 12
+            signGroup.position.set(-35, 0, 12);
+            signGroup.rotation.y = Math.PI / 4; // 面向場地中央
+            scene.add(signGroup);
+        }
+        createEasterEggSign();
+
+        // --- 場地地板 LOGO 載入 ---
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.load(
+            'LOGO.png', 
+            (texture) => {
+                texture.colorSpace = THREE.SRGBColorSpace;
+                const logoGeo = new THREE.PlaneGeometry(13, 13);
+                const logoMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.85 });
+                
+                // 右側 LOGO
+                const logoRight = new THREE.Mesh(logoGeo, logoMat);
+                logoRight.rotation.x = -Math.PI / 2;
+                logoRight.position.set(25, 0.05, -9); // 提高到 0.05 確保不被地板覆蓋
+                scene.add(logoRight);
+
+                // 左側 LOGO
+                const logoLeft = new THREE.Mesh(logoGeo, logoMat);
+                logoLeft.rotation.x = -Math.PI / 2;
+                logoLeft.position.set(-25, 0.05, -9); // 提高到 0.05
+                scene.add(logoLeft);
+            },
+        );
 
         // --- 標線工具 ---
         function createThickLineSegments(points, color, thickness) { const mat = new THREE.MeshBasicMaterial({ color: color }); const group = new THREE.Group(); for (let i = 0; i < points.length - 1; i++) { const dist = points[i].distanceTo(points[i + 1]); if (dist < 0.001) continue; const mesh = new THREE.Mesh(new THREE.BoxGeometry(thickness, 0.015, dist), mat); mesh.position.copy(points[i]).lerp(points[i + 1], 0.5); mesh.lookAt(points[i + 1]); group.add(mesh); } scene.add(group); return group; }
@@ -240,7 +306,7 @@
         for (let i = 0; i <= 5; i++) { let z = -20 + (i * 4); if (i % 2 === 0) { g1PathPoints.push(new THREE.Vector3(-20, 10, z)); g1PathPoints.push(new THREE.Vector3(20, 10, z)); } else { g1PathPoints.push(new THREE.Vector3(20, 10, z)); g1PathPoints.push(new THREE.Vector3(-20, 10, z)); } }
         const g1LineMesh = new THREE.Line(new THREE.BufferGeometry().setFromPoints(g1PathPoints), new THREE.LineBasicMaterial({ color: 0xFF0000, linewidth: 4 })); g1LineMesh.visible = false; scene.add(g1LineMesh);
 
-        // --- G2 空中航道 (由左上角起 20x20m, 3m高) ---
+        // --- G2 空中航道 ---
         const g2PathPoints = []; let g2Z = -20;
         for (let i = 0; i < 6; i++) {
             if (i % 2 === 0) { g2PathPoints.push(new THREE.Vector3(-10, 3, g2Z)); g2PathPoints.push(new THREE.Vector3(10, 3, g2Z)); } 
@@ -249,7 +315,7 @@
         }
         const g2LineMesh = new THREE.Line(new THREE.BufferGeometry().setFromPoints(g2PathPoints), new THREE.LineBasicMaterial({ color: 0x00FF00, linewidth: 4 })); g2LineMesh.visible = false; scene.add(g2LineMesh);
 
-        // --- G3 任務航道 (由左上角起 40x20m, 20m高) ---
+        // --- G3 任務航道 ---
         const g3PathPoints = []; let g3Z = -18;
         for(let i=0; i<6; i++) {
             if(i%2===0) { g3PathPoints.push(new THREE.Vector3(-20, 20, g3Z)); g3PathPoints.push(new THREE.Vector3(20, 20, g3Z)); } 
@@ -258,10 +324,20 @@
         }
         const g3LineMesh = new THREE.Line(new THREE.BufferGeometry().setFromPoints(g3PathPoints), new THREE.LineBasicMaterial({ color: 0xFF00FF, linewidth: 4 })); g3LineMesh.visible = false; scene.add(g3LineMesh);
 
-        // --- 原有大外框空中航道 ---
+        // --- 原有大外框空中航道與 EdgesGeometry 描邊 ---
         const trackShape = new THREE.Shape(); trackShape.moveTo(-32, -2); trackShape.lineTo(32, -2); trackShape.quadraticCurveTo(40, -2, 40, 6); trackShape.lineTo(40, 10); trackShape.quadraticCurveTo(40, 18, 32, 18); trackShape.lineTo(-32, 18); trackShape.quadraticCurveTo(-40, 18, -40, 10); trackShape.lineTo(-40, 6); trackShape.quadraticCurveTo(-40, -2, -32, -2);
         const holePath = new THREE.Path(); holePath.moveTo(-32, 2); holePath.lineTo(32, 2); holePath.quadraticCurveTo(36, 2, 36, 6); holePath.lineTo(36, 10); holePath.quadraticCurveTo(36, 14, 32, 14); holePath.lineTo(-32, 14); holePath.quadraticCurveTo(-36, 14, -36, 10); holePath.lineTo(-36, 6); holePath.quadraticCurveTo(-36, 2, -32, 2); trackShape.holes.push(holePath);
-        const aerialTrack = new THREE.Mesh(new THREE.ExtrudeGeometry(trackShape, { depth: 4, bevelEnabled: false, curveSegments: 16 }), new THREE.MeshBasicMaterial({ color: 0x00FFFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false })); aerialTrack.rotation.x = -Math.PI / 2; aerialTrack.position.y = 16; scene.add(aerialTrack);
+        
+        const aerialTrackGeo = new THREE.ExtrudeGeometry(trackShape, { depth: 4, bevelEnabled: false, curveSegments: 16 });
+        const aerialTrackMat = new THREE.MeshBasicMaterial({ color: 0x00FFFF, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false });
+        const aerialTrack = new THREE.Mesh(aerialTrackGeo, aerialTrackMat);
+        aerialTrack.rotation.x = -Math.PI / 2; aerialTrack.position.y = 16; scene.add(aerialTrack);
+        
+        // 使用 EdgesGeometry 僅顯示邊框線，避免內部雜亂的三角網格
+        const aerialTrackEdges = new THREE.EdgesGeometry(aerialTrackGeo, 15);
+        const aerialTrackOutlineMat = new THREE.LineBasicMaterial({ color: 0x00FFFF, transparent: true, opacity: 0.5 });
+        const aerialTrackOutline = new THREE.LineSegments(aerialTrackEdges, aerialTrackOutlineMat);
+        aerialTrackOutline.rotation.x = -Math.PI / 2; aerialTrackOutline.position.y = 16; scene.add(aerialTrackOutline);
 
         // --- 角錐與降落板 ---
         function createCone(x, z, labelText) { const cone = new THREE.Mesh(new THREE.ConeGeometry(0.2, 1.0, 16), new THREE.MeshStandardMaterial({ color: 0xFF6600, roughness: 0.6 })); cone.position.set(x, 0.5, z); cone.castShadow = true; scene.add(cone); const div = document.createElement('div'); div.className = 'marker-label'; div.innerText = labelText; labelsContainer.appendChild(div); labels.push({ element: div, pos: new THREE.Vector3(x, 1.3, z) }); }
@@ -327,7 +403,7 @@
 
         // --- 核心狀態與任務系統 ---
         const P = { H:{x:0,z:0}, P1:{x:-6,z:-12}, P2:{x:-12,z:-6}, P3:{x:-6,z:0}, P4:{x:0,z:-6}, P5:{x:6,z:-12}, P6:{x:12,z:-6}, P7:{x:6,z:0} };
-        let mission = { active: false, id: 'free', step: 0, timer: 5.0, failTimer: 0, isFailed: false, waitingSpace: false, autoPilot: false, g1TargetIndex: 0, g1Triggered: false, isSpraying: false, g2SprayPrompted: false, g2StopPrompted: false, orbitAccum: 0, lastAngle: null };
+        let mission = { active: false, id: 'free', step: 0, timer: 5.0, failTimer: 0, isFailed: false, completed: false, autoPilot: false, g1TargetIndex: 0, g1Triggered: false, isSpraying: false, g2SprayPrompted: false, g2StopPrompted: false, orbitAccum: 0, lastAngle: null };
         const centerMsg = document.getElementById('center-message');
 
         function normalizeAngle(a) { a = a % (Math.PI * 2); if (a > Math.PI) a -= Math.PI * 2; if (a < -Math.PI) a += Math.PI * 2; return a; }
@@ -338,13 +414,33 @@
             cdInterval = setInterval(() => { count--; if (count > 0) { centerMsg.innerHTML = `<span style="font-size:80px; color:#FF4500;">${count}</span>`; } else if (count === 0) { centerMsg.innerHTML = `<span style="font-size:80px; color:#39FF14;">GO!</span>`; } else { clearInterval(cdInterval); cdInterval = null; mission.active = true; if(callback) callback(); } }, 1000);
         }
 
+        // 新增關卡結算函數
+        function completeMission() {
+            if (mission.completed) return;
+            mission.completed = true;
+            mission.active = false; // 停止 animate() 中持續覆蓋 mStatus 的行為
+            centerMsg.style.display = 'block';
+            centerMsg.innerHTML = `<span style="color:#39FF14; font-size:40px; font-weight:bold; text-shadow: 0 0 15px rgba(57,255,20,0.8);">✅ 關卡完成</span><br><span style="color:white; font-size:20px;">3 秒後返回自由飛行...</span>`;
+            setTimeout(() => {
+                startMission('free');
+            }, 3000);
+        }
+
         function startMission(id) {
             if (cdInterval) { clearInterval(cdInterval); cdInterval = null; }
-            mission = { active: false, id: id, step: 1, timer: 5.0, isFailed: false, waitingSpace: false, autoPilot: false, g1TargetIndex: 0, g1Triggered: false, isSpraying: false, g2SprayPrompted: false, g2StopPrompted: false, orbitAccum: 0, lastAngle: null };
+            mission = { active: false, id: id, step: 1, timer: 5.0, isFailed: false, completed: false, autoPilot: false, g1TargetIndex: 0, g1Triggered: false, isSpraying: false, g2SprayPrompted: false, g2StopPrompted: false, orbitAccum: 0, lastAngle: null };
             targetRing.visible = false; targetRing2.visible = false; sprayGroup.visible = false;
             
             document.querySelectorAll('.mission-row').forEach(r => r.classList.remove('selected'));
             const selectedRow = document.querySelector(`.mission-row[data-id="${id}"]`); if(selectedRow) selectedRow.classList.add('selected'); selectedMissionId = id;
+
+            // 判斷開發中任務
+            if (['five', 'emergency', 'adv_rect'].includes(id)) {
+                centerMsg.style.display = 'block';
+                centerMsg.innerHTML = `<span style="color:#FFD700; font-size:40px; text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);">🚧 開發中 🚧</span>`;
+                setTimeout(() => { startMission('free'); }, 2000);
+                return;
+            }
 
             if (id === 'free') { centerMsg.style.display = 'none'; g1LineMesh.visible = false; g2LineMesh.visible = false; g3LineMesh.visible = false; return; }
 
@@ -357,18 +453,14 @@
             }
 
             g1LineMesh.visible = false; g2LineMesh.visible = false; g3LineMesh.visible = false;
-            if (id === 'hover' || id === 'adv_hover' || id === 'eight' || id === 'adv_eight') { droneGroup.position.set(0, droneYOffset, 0); droneGroup.rotation.set(0, 0, 0); } 
-            else if (id === 'five' || id === 'adv_rect' || id === 'side' || id === 'emergency') { droneGroup.position.set(0, 1.8 + droneYOffset, 0); droneGroup.rotation.set(0, id==='emergency'?-Math.PI/2:0, 0); }
+            // 基本級初始化設定 (包含 side)
+            if (id === 'hover' || id === 'adv_hover' || id === 'eight' || id === 'adv_eight' || id === 'side') { 
+                droneGroup.position.set(0, droneYOffset, 0); droneGroup.rotation.set(0, 0, 0); 
+            } 
             currentVelocity = { throttle: 0, yaw: 0, pitch: 0, roll: 0 }; showCenterCountdown(3);
         }
 
         document.getElementById('btn-start').addEventListener('click', (e) => { e.target.blur(); startMission(selectedMissionId); });
-        function showLevelEndModal(id) {
-            isPaused = true; document.getElementById('center-message').style.display = 'none'; const modal = document.getElementById('level-end-modal'); const container = document.getElementById('end-buttons-container'); container.innerHTML = '';
-            let btnRetry = document.createElement('button'); btnRetry.className = 'mission-btn'; btnRetry.style.background = '#FF8C00'; btnRetry.innerText = '🔄 重來本關'; btnRetry.onclick = () => { isPaused = false; modal.style.display = 'none'; startMission(id); }; container.appendChild(btnRetry);
-            let btnFree = document.createElement('button'); btnFree.className = 'mission-btn'; btnFree.style.background = '#555'; btnFree.innerText = '🎮 返回自由飛行'; btnFree.onclick = () => { isPaused = false; modal.style.display = 'none'; startMission('free'); }; container.appendChild(btnFree);
-            modal.style.display = 'block';
-        }
 
         let cameraMode = 0; const cameraModeNames = ["站位視角 (追蹤)", "第三人稱跟隨", "第一人稱 (FPV)"]; let windStrength = 0; 
         
@@ -385,8 +477,7 @@
             
             // ★ 任務空白鍵接管邏輯 ★
             if (e.key === ' ') {
-                if (mission.waitingSpace) { e.preventDefault(); mission.waitingSpace = false; showLevelEndModal(mission.id); }
-                else if (mission.id === 'adv_g1') {
+                if (mission.id === 'adv_g1') {
                     if (mission.step === 6.5) { mission.step = 7; showCenterCountdown(3, () => { mission.step = 8; mission.autoPilot = true; mission.g1TargetIndex = 0; mission.g1Triggered = false; }); }
                     else if (mission.step === 9) { mission.autoPilot = false; currentVelocity = { throttle: 0, yaw: 0, pitch: 0, roll: 0 }; mission.step = 9.1; setTimeout(() => { if (mission.id === 'adv_g1' && mission.step === 9.1) mission.step = 9.2; }, 1000); }
                     else if (mission.step === 9.2) { mission.step = 10; showCenterCountdown(3, () => { mission.step = 11; }); }
@@ -404,16 +495,14 @@
                         cameraMode = 0; document.getElementById('camera-mode').innerText = "站位視角 (追蹤)";
                         mission.step = 10; mission.autoPilot = true; mission.g1TargetIndex = 0;
                     }
-                    // ★ 接收停止飛行任務後的空白鍵
                     else if (mission.step === 11) {
                         mission.autoPilot = false; 
                         currentVelocity = { throttle: 0, yaw: 0, pitch: 0, roll: 0 }; 
-                        mission.step = 11.1; // 顯示口誦結束
+                        mission.step = 11.1; 
                         setTimeout(() => { 
-                            if (mission.id === 'adv_g3' && mission.step === 11.1) mission.step = 11.2; // 1秒後顯示結束飛行任務
+                            if (mission.id === 'adv_g3' && mission.step === 11.1) mission.step = 11.2; 
                         }, 1000);
                     }
-                    // ★ 接收結束飛行任務後的空白鍵，觸發 3.2.1 GO 並返回
                     else if (mission.step === 11.2) {
                         mission.step = 11.5; 
                         showCenterCountdown(3, () => { mission.step = 12; });
@@ -526,16 +615,35 @@
                 }
 
                 // ==========================================
+                // ★ 空中跑道發光判定 ★
+                // ==========================================
+                let inTrackHeight = droneGroup.position.y >= 15.5 && droneGroup.position.y <= 20.5; 
+                let inOuterBox = droneGroup.position.x >= -40 && droneGroup.position.x <= 40 && droneGroup.position.z >= -18 && droneGroup.position.z <= 2; 
+                let insideHole = droneGroup.position.x > -36 && droneGroup.position.x < 36 && droneGroup.position.z > -14 && droneGroup.position.z < -2; 
+                
+                if (inTrackHeight && inOuterBox && !insideHole) {
+                    // 發光 (切換為綠色且增加不透明度)
+                    aerialTrack.material.opacity = 0.5;
+                    aerialTrack.material.color.setHex(0x39FF14); // 螢光綠
+                    aerialTrackOutline.material.color.setHex(0x39FF14); // 螢光綠
+                    aerialTrackOutline.material.opacity = 1.0;
+                } else {
+                    // 恢復 cyan
+                    aerialTrack.material.opacity = 0.25;
+                    aerialTrack.material.color.setHex(0x00FFFF); // Cyan 本體
+                    aerialTrackOutline.material.color.setHex(0x00FFFF); // Cyan 描邊
+                    aerialTrackOutline.material.opacity = 0.5;
+                }
+
+                // ==========================================
                 // ★ 考照任務判定邏輯 ★
                 // ==========================================
-                if (mission.active) {
+                if (mission.active && !mission.completed) {
                     let mStatus = ""; let curH = droneGroup.position.y - droneYOffset; let curYaw = normalizeAngle(droneGroup.rotation.y); let distToH = Math.hypot(droneGroup.position.x - P.H.x, droneGroup.position.z - P.H.z);
 
                     if (mission.isFailed) {
                         mStatus = `<span style="color:#FF4444; font-size:36px;">❌ 任務失敗！</span><br><span style="font-size:20px;">0.3秒後重新開始...</span>`;
                         mission.failTimer -= dt; if (mission.failTimer <= 0) startMission(mission.id);
-                    } else if (mission.waitingSpace) {
-                        mStatus = `<span style="color:#39FF14; font-size:36px;">✅ 關卡完成！</span><br><span style="font-size:20px;">按下 [空白鍵] 呼叫過關選單</span>`;
                     } else {
                         // ------------------------------------------
                         // ★ 高級：G1 儀表飛行
@@ -570,7 +678,6 @@
                                         droneGroup.position.y = THREE.MathUtils.lerp(droneGroup.position.y, 10 + droneYOffset, 0.05);
                                     }
                                     
-                                    // ★ 修正 G1 隨機觸發為必定觸發（飛越中線）
                                     if (mission.step === 8 && !mission.g1Triggered && mission.g1TargetIndex === 3) {
                                         if (droneGroup.position.x < 0) { mission.g1Triggered = true; mission.step = 9; }
                                     }
@@ -579,7 +686,7 @@
                             else if (mission.step === 9.2) { mStatus = `<span style="color:#FFD700; font-size:36px; font-weight:bold;">結束飛行任務</span><br><span style="font-size:24px;">按下 [空白鍵] 恢復手動操作</span>`; } 
                             else if (mission.step === 11) {
                                 targetRing.visible = true; targetRing.position.set(P.H.x, 0.03, P.H.z);
-                                if (Math.hypot(droneGroup.position.x - P.H.x, droneGroup.position.z - P.H.z) <= 1.0 && curH <= 0.1) mission.waitingSpace = true;
+                                if (Math.hypot(droneGroup.position.x - P.H.x, droneGroup.position.z - P.H.z) <= 1.0 && curH <= 0.2) completeMission();
                                 else mStatus = `<span style="color:#FFD700;">手動接管</span><br>請飛回並降落於 H 點`;
                             }
                         }
@@ -606,12 +713,9 @@
                                         droneGroup.position.y = THREE.MathUtils.lerp(droneGroup.position.y, 3 + droneYOffset, 0.05); // 高度 3m
                                     }
 
-                                    // ★ 修正 G2 隨機觸發為必定觸發
-                                    // 第一條線中線噴灑 (index === 1 代表走向 x=10)
                                     if (mission.step === 2 && mission.g1TargetIndex === 1 && !mission.g2SprayPrompted) {
                                         if (droneGroup.position.x > 0) { mission.g2SprayPrompted = true; mission.step = 3; }
                                     }
-                                    // 第二條線中線停止 (index === 3 代表走向 x=-10)
                                     if (mission.step === 4 && mission.g1TargetIndex === 3 && !mission.g2StopPrompted) {
                                         if (droneGroup.position.x < 0) { mission.g2StopPrompted = true; mission.step = 5; }
                                     }
@@ -620,59 +724,42 @@
                             else if (mission.step === 5.2) { mStatus = `<span style="color:#FFD700; font-size:36px; font-weight:bold;">結束飛行任務</span><br><span style="font-size:24px;">按下 [空白鍵] 恢復手動操作</span>`; } 
                             else if (mission.step === 6) {
                                 targetRing.visible = true; targetRing.position.set(P.H.x, 0.03, P.H.z);
-                                if (distToH <= 1.0 && curH <= 0.1) mission.waitingSpace = true;
+                                if (distToH <= 1.0 && curH <= 0.2) completeMission();
                                 else mStatus = `<span style="color:#FFD700;">手動接管</span><br>請飛回並降落於 H 點`;
                             }
                         }
                         // ------------------------------------------
-                        // ★ 高級：G3 興趣點飛行 (含準心系統)
+                        // ★ 高級：G3 興趣點飛行
                         // ------------------------------------------
                         else if (mission.id === 'adv_g3') {
-                            
-                            // 軌跡與準心判定邏輯
                             const trackOrbit = (poi, cw) => {
                                 let curAng = Math.atan2(droneGroup.position.z - poi.z, droneGroup.position.x - poi.x);
                                 if (mission.lastAngle === null) mission.lastAngle = curAng;
-                                
                                 let da = curAng - mission.lastAngle;
-                                if (da > Math.PI) da -= Math.PI * 2; 
-                                if (da < -Math.PI) da += Math.PI * 2;
-
-                                // 投影興趣點到螢幕，判斷是否在準心範圍內 (容錯率 35%)
-                                let poiPos3D = new THREE.Vector3(poi.x, 0, poi.z);
-                                poiPos3D.project(camera);
+                                if (da > Math.PI) da -= Math.PI * 2; if (da < -Math.PI) da += Math.PI * 2;
+                                let poiPos3D = new THREE.Vector3(poi.x, 0, poi.z); poiPos3D.project(camera);
                                 let isAiming = (cameraMode === 2 && poiPos3D.z < 1 && Math.abs(poiPos3D.x) < 0.35 && Math.abs(poiPos3D.y) < 0.35);
-
-                                // 只有對準目標時，才累計繞行角度
-                                if (isAiming) {
-                                    mission.orbitAccum += da;
-                                }
-
+                                if (isAiming) mission.orbitAccum += da;
                                 mission.lastAngle = curAng;
-                                return { 
-                                    pct: Math.min(100, Math.abs(mission.orbitAccum) / (Math.PI * 2) * 100),
-                                    aiming: isAiming 
-                                };
+                                return { pct: Math.min(100, Math.abs(mission.orbitAccum) / (Math.PI * 2) * 100), aiming: isAiming };
                             };
 
-                            if (mission.step === 1) { // 懸停 5 秒
+                            if (mission.step === 1) { 
                                 if (distToH > 1.5 || Math.abs(curH - 1.8) > 0.3 || Math.abs(normalizeAngle(curYaw - 0)) > 0.26) { mission.timer = 5.0; mStatus = `<span style="color:#FFD700;">G3 步驟 1/12</span><br>H點上方 1.8m，面朝 12點鐘`; } 
                                 else { mission.timer -= dt; mStatus = `<span style="color:#FFD700;">G3 步驟 1/12</span><br>保持懸停... <span style="color:#39FF14;">${Math.ceil(mission.timer)} 秒</span>`; if (mission.timer <= 0) { mission.step = 2; cameraMode = 2; document.getElementById('camera-mode').innerText = "第一人稱 (FPV)"; } }
                             }
-                            else if (mission.step === 2) { // 飛到 P1, 3-5m
+                            else if (mission.step === 2) { 
                                 targetRing.visible = true; targetRing.position.set(P.P1.x, 0.03, P.P1.z);
                                 let dP1 = Math.hypot(droneGroup.position.x - P.P1.x, droneGroup.position.z - P.P1.z);
                                 if (dP1 < 1.5 && curH >= 2.5 && curH <= 5.5) { mission.step = 3; mission.lastAngle = null; mission.orbitAccum = 0; }
                                 else mStatus = `<span style="color:#FFD700;">G3 步驟 2/12</span><br>升高至 3~5m 並飛到 P1 點上方`;
                             }
-                            else if (mission.step === 3 || mission.step === 4) { // 繞行 A 點 (3=順, 4=逆)
+                            else if (mission.step === 3 || mission.step === 4) { 
                                 targetRing.visible = false; let distA = Math.hypot(droneGroup.position.x - POI_A.x, droneGroup.position.z - POI_A.z);
                                 let orbitData = trackOrbit(POI_A, mission.step === 3);
                                 mStatus = `<span style="color:#FFD700;">G3 步驟 ${mission.step}/12</span><br>請以 ${mission.step===3?'順':'逆'}時針 繞行 A 點一圈 (${orbitData.pct.toFixed(0)}%)`;
-                                
                                 if (cameraMode !== 2) mStatus += `<br><span style="color:#FF4444; font-weight:bold;">⚠️ 請切換至 FPV 視角進行瞄準！</span>`;
                                 else if (!orbitData.aiming) mStatus += `<br><span style="color:#FF4444; font-weight:bold;">⚠️ 準心未對準興趣點！(進度暫停)</span>`;
-
                                 if (distA > 15 || curH < 2 || curH > 6) mStatus += `<br><span style="color:#FF4444;">警告：偏離繞行軌跡與高度過大</span>`;
 
                                 if (mission.step === 3) {
@@ -683,32 +770,30 @@
                                     if (mission.orbitAccum > 0.5) mStatus += `<br><span style="color:#FF4444;">方向錯誤！請逆時針繞行</span>`;
                                 }
                             }
-                            else if (mission.step === 3.5 || mission.step === 4.5) { // 返回 P1
+                            else if (mission.step === 3.5 || mission.step === 4.5) { 
                                 targetRing.visible = true; targetRing.position.set(P.P1.x, 0.03, P.P1.z);
                                 let dP1 = Math.hypot(droneGroup.position.x - P.P1.x, droneGroup.position.z - P.P1.z);
                                 mStatus = `<span style="color:#FFD700;">繞行完成</span><br>請飛回 P1 點上方`;
                                 if (dP1 < 1.5) { mission.step = (mission.step === 3.5) ? 4 : 5; mission.lastAngle = null; mission.orbitAccum = 0; }
                             }
-                            else if (mission.step === 5) { // 降落 A
+                            else if (mission.step === 5) { 
                                 targetRing.visible = true; targetRing.position.set(POI_A.x, 0.03, POI_A.z);
                                 let distA = Math.hypot(droneGroup.position.x - POI_A.x, droneGroup.position.z - POI_A.z);
                                 mStatus = `<span style="color:#FFD700;">G3 步驟 5/12</span><br>將飛機降落至興趣點 A 上方`;
                                 if (distA < 1.0 && curH < 0.2) mission.step = 6;
                             }
-                            else if (mission.step === 6) { // 飛到 P5, 3-5m
+                            else if (mission.step === 6) { 
                                 targetRing.visible = true; targetRing.position.set(P.P5.x, 0.03, P.P5.z);
                                 let dP5 = Math.hypot(droneGroup.position.x - P.P5.x, droneGroup.position.z - P.P5.z);
                                 if (dP5 < 1.5 && curH >= 2.5 && curH <= 5.5) { mission.step = 7; mission.lastAngle = null; mission.orbitAccum = 0; }
                                 else mStatus = `<span style="color:#FFD700;">G3 步驟 6/12</span><br>升高至 3~5m 並飛到 P5 點上方`;
                             }
-                            else if (mission.step === 7 || mission.step === 8) { // 繞行 B 點 (7=順, 8=逆)
+                            else if (mission.step === 7 || mission.step === 8) { 
                                 targetRing.visible = false; let distB = Math.hypot(droneGroup.position.x - POI_B.x, droneGroup.position.z - POI_B.z);
                                 let orbitData = trackOrbit(POI_B, mission.step === 7);
                                 mStatus = `<span style="color:#FFD700;">G3 步驟 ${mission.step}/12</span><br>請以 ${mission.step===7?'順':'逆'}時針 繞行 B 點一圈 (${orbitData.pct.toFixed(0)}%)`;
-                                
                                 if (cameraMode !== 2) mStatus += `<br><span style="color:#FF4444; font-weight:bold;">⚠️ 請切換至 FPV 視角進行瞄準！</span>`;
                                 else if (!orbitData.aiming) mStatus += `<br><span style="color:#FF4444; font-weight:bold;">⚠️ 準心未對準興趣點！(進度暫停)</span>`;
-
                                 if (distB > 15 || curH < 2 || curH > 6) mStatus += `<br><span style="color:#FF4444;">警告：偏離繞行軌跡與高度過大</span>`;
                                 
                                 if (mission.step === 7) {
@@ -719,22 +804,21 @@
                                     if (mission.orbitAccum > 0.5) mStatus += `<br><span style="color:#FF4444;">方向錯誤！請逆時針繞行</span>`;
                                 }
                             }
-                            else if (mission.step === 7.5 || mission.step === 8.5) { // 返回 P5
+                            else if (mission.step === 7.5 || mission.step === 8.5) { 
                                 targetRing.visible = true; targetRing.position.set(P.P5.x, 0.03, P.P5.z);
                                 let dP5 = Math.hypot(droneGroup.position.x - P.P5.x, droneGroup.position.z - P.P5.z);
                                 mStatus = `<span style="color:#FFD700;">繞行完成</span><br>請飛回 P5 點上方`;
                                 if (dP5 < 1.5) { mission.step = (mission.step === 7.5) ? 8 : 9; mission.lastAngle = null; mission.orbitAccum = 0; }
                             }
-                            else if (mission.step === 9) { // 降落 B
+                            else if (mission.step === 9) { 
                                 targetRing.visible = true; targetRing.position.set(POI_B.x, 0.03, POI_B.z);
                                 let distB = Math.hypot(droneGroup.position.x - POI_B.x, droneGroup.position.z - POI_B.z);
                                 mStatus = `<span style="color:#FFD700;">G3 步驟 9/12</span><br>將飛機降落至興趣點 B 上方`;
                                 if (distB < 1.0 && curH < 0.2) mission.step = 9.5;
                             }
-                            else if (mission.step === 9.5) { // 轉視角，等待空白鍵
+                            else if (mission.step === 9.5) { 
                                 mStatus = `<span style="color:#FFD700; font-size:32px;">G3 步驟 10/12</span><br>轉至站位視角<br><span style="font-size:24px;">按下 [空白鍵] 開始任務航點飛行</span>`;
                             }
-                            // ★ 自動航路階段與結算
                             else if (mission.step >= 10 && mission.step <= 11) { 
                                 mStatus = `<span style="color:#00BFFF; font-weight:bold;">自動任務航點飛行中 (高度 20m)...</span>`;
                                 if (mission.step === 11) mStatus = `<span style="color:#FF4444; font-size:40px; font-weight:bold;">⚠️ 停止飛行任務 ⚠️</span><br><span style="font-size:24px;">操作者需按下 [空白鍵] 強制停止機身懸停</span>`;
@@ -760,9 +844,8 @@
                                         droneGroup.position.y = THREE.MathUtils.lerp(droneGroup.position.y, 20 + droneYOffset, 0.05); // 高度 20m
                                     }
                                     
-                                    // 第11步：在第二條線上確定發布停止 (index 3 代表走向第二條線末端 x=-20)
                                     if (mission.step === 10 && mission.g1TargetIndex === 3 && !mission.g2StopPrompted) {
-                                        if (droneGroup.position.x < 0) { // ★ 飛過中線時必定觸發，絕不錯過
+                                        if (droneGroup.position.x < 0) {
                                             mission.g2StopPrompted = true; 
                                             mission.step = 11; 
                                         }
@@ -771,11 +854,59 @@
                             }
                             else if (mission.step === 11.1) { mStatus = `<span style="color:#39FF14; font-size:36px; font-weight:bold;">口誦結束</span>`; } 
                             else if (mission.step === 11.2) { mStatus = `<span style="color:#FFD700; font-size:36px; font-weight:bold;">結束飛行任務</span><br><span style="font-size:24px;">按下 [空白鍵] 準備返航</span>`; } 
-                            else if (mission.step === 11.5) { mStatus = ""; } // 等待 3 2 1 GO 倒數時隱藏文字
+                            else if (mission.step === 11.5) { mStatus = ""; }
                             else if (mission.step === 12) {
                                 targetRing.visible = true; targetRing.position.set(P.H.x, 0.03, P.H.z);
-                                if (distToH <= 1.0 && curH <= 0.1) mission.waitingSpace = true;
+                                if (distToH <= 1.0 && curH <= 0.2) completeMission();
                                 else mStatus = `<span style="color:#FFD700;">G3 步驟 12/12</span><br>請手動飛回並降落於 H 點完成考試`;
+                            }
+                        }
+                        // ------------------------------------------
+                        // ★ 基本級：側邊懸停前進後退
+                        // ------------------------------------------
+                        else if (mission.id === 'side') {
+                            const sideSteps = [
+                                null,
+                                { p: P.H, face: 0, desc: "起飛至H點上方預備，面朝12點鐘" }, // 1
+                                { p: P.H, face: Math.PI/2, desc: "轉至9點鐘方向於H點上方" }, // 2
+                                { p: P.P3, face: Math.PI/2, desc: "前往P3角錐上方" },         // 3
+                                { p: P.P7, face: Math.PI/2, desc: "前往P7角錐上方" },         // 4
+                                { p: P.H, face: Math.PI/2, desc: "回到H點上方" },             // 5
+                                { p: P.H, face: -Math.PI/2, desc: "轉至3點鐘方向於H點上方" }, // 6
+                                { p: P.P7, face: -Math.PI/2, desc: "前往P7角錐上方" },        // 7
+                                { p: P.P3, face: -Math.PI/2, desc: "前往P3角錐上方" },        // 8
+                                { p: P.H, face: -Math.PI/2, desc: "回到H點上方" }             // 9
+                            ];
+
+                            if (mission.step <= 9) {
+                                let cur = sideSteps[mission.step];
+                                targetRing.visible = true; targetRing.position.set(cur.p.x, 0.03, cur.p.z);
+                                let distToT = Math.hypot(droneGroup.position.x - cur.p.x, droneGroup.position.z - cur.p.z);
+                                let hDiff = Math.abs(curH - 1.8);
+                                let aDiff = Math.abs(normalizeAngle(curYaw - cur.face));
+
+                                if (distToT > 1.5 || hDiff > 0.3 || aDiff > 0.26) {
+                                    mission.timer = 5.0;
+                                    mStatus = `<span style="color:#FFD700;">步驟 ${mission.step}/10</span><br>${cur.desc}，維持高度 1.8m`;
+                                } else {
+                                    mission.timer -= dt;
+                                    mStatus = `<span style="color:#FFD700;">步驟 ${mission.step}/10</span><br>保持懸停... <span style="color:#39FF14;">${Math.ceil(mission.timer)} 秒</span>`;
+                                    if (mission.timer <= 0) {
+                                        mission.step++;
+                                        mission.timer = 5.0;
+                                    }
+                                }
+                            } else if (mission.step === 10) {
+                                targetRing.visible = true; targetRing.position.set(P.H.x, 0.03, P.H.z);
+                                let aDiff = Math.abs(normalizeAngle(curYaw - 0)); // 面朝12點鐘 (0)
+                                let hDiff = Math.abs(curH - 1.8);
+                                
+                                // 判斷是否轉正 12 點鐘方向，且保持高度與位置
+                                if (distToH <= 1.5 && hDiff <= 0.3 && aDiff <= 0.26) {
+                                    completeMission();
+                                } else {
+                                    mStatus = `<span style="color:#FFD700;">步驟 10/10</span><br>轉回面朝12點鐘 (維持高度 1.8m) 以結束測驗`;
+                                }
                             }
                         }
                         // ------------------------------------------
@@ -785,8 +916,16 @@
                             if (mission.step <= 5) {
                                 const angles = [0, 0, -Math.PI/2, Math.PI, Math.PI/2, 0]; const targetAngle = angles[mission.step]; const faceText = ["", "12點鐘", "3點鐘", "6點鐘", "9點鐘", "12點鐘"][mission.step];
                                 let aDiff = Math.abs(normalizeAngle(curYaw - targetAngle)); let hDiff = Math.abs(curH - 1.8);
-                                if (distToH > 1.0) { mission.isFailed = true; mission.failTimer = 0.3; } else if (hDiff > 0.3 || aDiff > 0.26) { mission.timer = 5.0; if (mission.step === 1) mStatus = `<span style="color:#FFD700;">步驟 1/6</span><br>起飛至H點上方1.8公尺處懸停，面朝12點方向`; else mStatus = `<span style="color:#FFD700;">步驟 ${mission.step}/6</span><br>面朝 ${faceText} 於 1.8m 處懸停`; } else { mission.timer -= dt; mStatus = `<span style="color:#FFD700;">步驟 ${mission.step}/6</span><br>保持懸停... <span style="color:#39FF14;">${Math.ceil(mission.timer)} 秒</span>`; if (mission.timer <= 0) { mission.step++; mission.timer = 5.0; } }
-                            } else if (mission.step === 6) { mStatus = `<span style="color:#FFD700;">步驟 6/6</span><br>請降落於H點`; if (curH <= 0.1 && distToH <= 1.0) mission.waitingSpace = true; }
+                                if (distToH > 1.0) { mission.isFailed = true; mission.failTimer = 0.3; } 
+                                else if (hDiff > 0.3 || aDiff > 0.26) { mission.timer = 5.0; if (mission.step === 1) mStatus = `<span style="color:#FFD700;">步驟 1/6</span><br>起飛至H點上方1.8公尺處懸停，面朝12點方向`; else mStatus = `<span style="color:#FFD700;">步驟 ${mission.step}/6</span><br>面朝 ${faceText} 於 1.8m 處懸停`; } 
+                                else { mission.timer -= dt; mStatus = `<span style="color:#FFD700;">步驟 ${mission.step}/6</span><br>保持懸停... <span style="color:#39FF14;">${Math.ceil(mission.timer)} 秒</span>`; if (mission.timer <= 0) { mission.step++; mission.timer = 5.0; } }
+                            } else if (mission.step === 6) { 
+                                if (curH <= 0.2 && distToH <= 1.0) {
+                                    completeMission();
+                                } else {
+                                    mStatus = `<span style="color:#FFD700;">步驟 6/6</span><br>請降落於H點`; 
+                                }
+                            }
                         }
                         else if (mission.id === 'eight' || mission.id === 'adv_eight') {
                             if (mission.step === 1) {
@@ -795,9 +934,17 @@
                                 const pts = [P.P4, P.P1, P.P2, P.P3, P.P4, P.P5, P.P6, P.P7, P.P4]; const ptNames = ['P4', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P4']; const tP = pts[mission.step - 2];
                                 targetRing.visible = true; targetRing.position.set(tP.x, 0.03, tP.z); mStatus = `<span style="color:#FFD700;">步驟 ${mission.step}/11</span><br>前往 ${ptNames[mission.step - 2]} 點`;
                                 if (Math.hypot(droneGroup.position.x - tP.x, droneGroup.position.z - tP.z) <= 1.5) mission.step++;
-                            } else if (mission.step === 11) { targetRing.visible = false; mStatus = `<span style="color:#FFD700;">步驟 11/11</span><br>請懸停於H點上方 1.8m`; if (distToH <= 1.0 && Math.abs(curH - 1.8) <= 0.3) mission.waitingSpace = true; }
+                            } else if (mission.step === 11) { 
+                                targetRing.visible = false; 
+                                if (distToH <= 1.0 && Math.abs(curH - 1.8) <= 0.3) {
+                                    completeMission(); 
+                                } else {
+                                    mStatus = `<span style="color:#FFD700;">步驟 11/11</span><br>請懸停於H點上方 1.8m`; 
+                                }
+                            }
                         }
                     }
+                    // 更新中央文字顯示
                     if(mStatus !== "") { centerMsg.innerHTML = mStatus; }
                 }
             } // END OF if(!isPaused) BLOCK
@@ -831,6 +978,14 @@
             });
 
             renderer.render(scene, camera);
+        }
+
+        // --- 視窗自適應 ---
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         }
         
         startMission('free');
