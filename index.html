@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>台續無人機術科模擬器</title>
-    <link rel="icon" href="https://github.com/apollos0789/dronesim/blob/main/LOGO.png?raw=true">
+    <title>台續多旋翼術科模擬器</title>
+    <link rel="icon" href="LOGO.png">
     <style>
         body { margin: 0; overflow: hidden; background-color: #87CEEB; }
         canvas { display: block; }
@@ -20,6 +20,16 @@
         #hud-left h2 { font-size: 18px; margin: 0 0 10px 0; color: #00BFFF; border-bottom: 1px solid #555; padding-bottom: 5px; }
         .data-row { margin-bottom: 5px; }
         .data-val { color: #FFD700; font-weight: bold; }
+        #wind-view { height: 135px; display: flex; align-items: center; justify-content: center; gap: 13px; font-family: 'Courier New', monospace; }
+        .wind-compass { display: inline-flex; align-items: center; gap: 7px; vertical-align: middle; }
+        .wind-dial { position: relative; display: block; flex: 0 0 86px; width: 86px; min-width: 86px; max-width: 86px; height: 86px; min-height: 86px; max-height: 86px; box-sizing: border-box; aspect-ratio: 1 / 1; border: 2px solid #FFD700; border-radius: 50%; background: rgba(30, 15, 0, 0.5); color: #DDD; font: 12px Arial, sans-serif; box-shadow: 0 0 8px rgba(255, 215, 0, 0.25); }
+        .wind-dial .north { position: absolute; top: 5px; left: 50%; transform: translateX(-50%); }
+        .wind-dial .east { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); }
+        .wind-dial .south { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); }
+        .wind-dial .west { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); }
+        .wind-arrow { position: absolute; left: 50%; top: 50%; width: 4px; height: 45px; background: #FFD700; transform: translate(-50%, -100%) rotate(0deg); transform-origin: 50% 100%; box-shadow: 0 0 4px #000; }
+        .wind-arrow::before { content: ''; position: absolute; left: 50%; top: -4px; transform: translateX(-50%); border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #FFD700; }
+        .wind-readout { color: #FFD700; font-size: 13px; line-height: 1.8; white-space: nowrap; }
 
         /* 右上角：表格化任務選單面板 */
         #mission-panel {
@@ -156,6 +166,13 @@
             <div id="telemetry-box" class="collapsible-content">等待輸入...</div>
         </div>
         <div class="panel-box">
+            <h2>&nbsp;🌬️ 風向 <span id="toggle-wind" class="toggle-btn" title="收起/展開面板">➖</span></h2>
+            <div id="wind-view" class="collapsible-content">
+                <span class="wind-dial" aria-hidden="true"><span class="north">N</span><span class="east">E</span><span class="south">S</span><span class="west">W</span><span id="wind-arrow" class="wind-arrow"></span></span>
+                <div class="wind-readout"><div id="wind-direction">無風</div><div>風速 <span id="wind-speed">0.0</span> m/s</div><div>上限 等級 <span id="wind-base">0</span></div></div>
+            </div>
+        </div>
+        <div class="panel-box">
             <h2>&nbsp;🛩️ 飛行姿態 <span id="toggle-attitude" class="toggle-btn" title="收起/展開面板">➖</span></h2>
             <div id="attitude-view" class="collapsible-content"></div>
         </div>
@@ -253,7 +270,7 @@
         // --- 場地地板 LOGO 載入 ---
         const textureLoader = new THREE.TextureLoader();
         textureLoader.load(
-            'https://github.com/apollos0789/dronesim/blob/main/LOGO.png?raw=true', 
+            'LOGO.png', 
             (texture) => {
                 texture.colorSpace = THREE.SRGBColorSpace;
                 const logoGeo = new THREE.PlaneGeometry(13, 13);
@@ -344,6 +361,7 @@
         createCone(-6, -12, 'P1'); createCone(-12, -6, 'P2'); createCone(-6, 0, 'P3'); createCone(0, -6, 'P4'); createCone(6, -12, 'P5'); createCone(12, -6, 'P6'); createCone(6, 0, 'P7');
         const targetRing = new THREE.Mesh(new THREE.CircleGeometry(1.5, 32), new THREE.MeshBasicMaterial({ color: 0x39FF14, transparent: true, opacity: 0.4, side: THREE.DoubleSide })); targetRing.rotation.x = -Math.PI / 2; targetRing.position.y = 0.03; targetRing.visible = false; scene.add(targetRing);
         const targetRing2 = new THREE.Mesh(new THREE.CircleGeometry(1.5, 32), new THREE.MeshBasicMaterial({ color: 0x39FF14, transparent: true, opacity: 0.4, side: THREE.DoubleSide })); targetRing2.rotation.x = -Math.PI / 2; targetRing2.position.y = 0.03; targetRing2.visible = false; scene.add(targetRing2);
+        const fiveSensor = new THREE.Mesh(new THREE.SphereGeometry(2.5, 24, 16), new THREE.MeshBasicMaterial({ color: 0xFFD700, wireframe: true, transparent: true, opacity: 0.85, depthTest: false })); fiveSensor.visible = false; fiveSensor.renderOrder = 20; scene.add(fiveSensor);
         const hPadGroup = new THREE.Group(); hPadGroup.position.set(0, 0.015, 0); const padMesh = new THREE.Mesh(new THREE.CircleGeometry(1.0, 32), new THREE.MeshStandardMaterial({ color: 0xDDDDDD })); padMesh.rotation.x = -Math.PI / 2; padMesh.receiveShadow = true; hPadGroup.add(padMesh); const hMat = new THREE.MeshStandardMaterial({ color: 0x333333, emissive: 0x000000 }); hPadGroup.add(new THREE.Mesh(new THREE.PlaneGeometry(0.2, 1.0), hMat).translateZ(0).translateX(-0.4).rotateX(-Math.PI/2)); hPadGroup.add(new THREE.Mesh(new THREE.PlaneGeometry(0.2, 1.0), hMat).translateZ(0).translateX(0.4).rotateX(-Math.PI/2)); hPadGroup.add(new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.2), hMat).rotateX(-Math.PI/2)); scene.add(hPadGroup);
 
         // --- 無人機模型生成 ---
@@ -396,7 +414,7 @@
                 e.target.innerText = content.classList.contains('hidden') ? '➕' : '➖'; e.target.title = content.classList.contains('hidden') ? '展開面板' : '收起面板';
             });
         }
-        togglePanel('toggle-mission', 'mission-content'); togglePanel('toggle-telemetry', 'telemetry-box'); togglePanel('toggle-attitude', 'attitude-view');
+        togglePanel('toggle-mission', 'mission-content'); togglePanel('toggle-telemetry', 'telemetry-box'); togglePanel('toggle-wind', 'wind-view'); togglePanel('toggle-attitude', 'attitude-view');
 
         let selectedMissionId = 'free';
         document.querySelectorAll('.mission-row').forEach(row => { row.addEventListener('click', (e) => { document.querySelectorAll('.mission-row').forEach(r => r.classList.remove('selected')); e.target.classList.add('selected'); selectedMissionId = e.target.getAttribute('data-id'); }); });
@@ -426,16 +444,27 @@
             }, 3000);
         }
 
+        function completeFiveMission() {
+            if (mission.completed) return;
+            mission.completed = true;
+            mission.active = false;
+            targetRing.visible = false;
+            fiveSensor.visible = false;
+            centerMsg.style.display = 'block';
+            centerMsg.innerHTML = `<span style="font-size:80px; color:#39FF14;">結束</span>`;
+            setTimeout(() => { startMission('free'); }, 3000);
+        }
+
         function startMission(id) {
             if (cdInterval) { clearInterval(cdInterval); cdInterval = null; }
-            mission = { active: false, id: id, step: 1, timer: 5.0, isFailed: false, completed: false, autoPilot: false, g1TargetIndex: 0, g1Triggered: false, isSpraying: false, g2SprayPrompted: false, g2StopPrompted: false, orbitAccum: 0, lastAngle: null };
-            targetRing.visible = false; targetRing2.visible = false; sprayGroup.visible = false;
+            mission = { active: false, id: id, step: 1, timer: 5.0, isFailed: false, completed: false, autoPilot: false, g1TargetIndex: 0, g1Triggered: false, isSpraying: false, g2SprayPrompted: false, g2StopPrompted: false, orbitAccum: 0, lastAngle: null, fiveWindFrom: null, fiveWindBaseHeading: null };
+            targetRing.visible = false; targetRing2.visible = false; fiveSensor.visible = false; sprayGroup.visible = false;
             
             document.querySelectorAll('.mission-row').forEach(r => r.classList.remove('selected'));
             const selectedRow = document.querySelector(`.mission-row[data-id="${id}"]`); if(selectedRow) selectedRow.classList.add('selected'); selectedMissionId = id;
 
             // 判斷開發中任務
-            if (['five', 'emergency', 'adv_rect'].includes(id)) {
+            if (['emergency', 'adv_rect'].includes(id)) {
                 centerMsg.style.display = 'block';
                 centerMsg.innerHTML = `<span style="color:#FFD700; font-size:40px; text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);">🚧 開發中 🚧</span>`;
                 setTimeout(() => { startMission('free'); }, 2000);
@@ -444,10 +473,19 @@
 
             if (id === 'free') { centerMsg.style.display = 'none'; g1LineMesh.visible = false; g2LineMesh.visible = false; g3LineMesh.visible = false; return; }
 
+            if (id === 'five') {
+                droneGroup.position.set(0, 1.8 + droneYOffset, 0); droneGroup.rotation.set(0, 0, 0); currentVelocity = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
+                mission.fiveWindFrom = Math.random() < 0.5 ? 'east' : 'west';
+                mission.fiveWindBaseHeading = mission.fiveWindFrom === 'east' ? Math.PI : 0;
+                windTimer = 0; chooseNextWind();
+                g1LineMesh.visible = false; g2LineMesh.visible = false; g3LineMesh.visible = false;
+                showCenterCountdown(3); return;
+            }
+
             // G 類初始化設定
             if (id === 'adv_g1' || id === 'adv_g2' || id === 'adv_g3') {
                 droneGroup.position.set(0, 1.8 + droneYOffset, 0); droneGroup.rotation.set(0, 0, 0); currentVelocity = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
-                cameraMode = 0; document.getElementById('camera-mode').innerText = "站位視角 (追蹤)"; windStrength = 0; document.getElementById('wind-status').innerText = "0"; document.getElementById('wind-status').style.color = "#00FF00";
+                cameraMode = 0; document.getElementById('camera-mode').innerText = "站位視角 (追蹤)"; setWindStrength(0);
                 g1LineMesh.visible = (id === 'adv_g1'); g2LineMesh.visible = (id === 'adv_g2'); g3LineMesh.visible = (id === 'adv_g3');
                 showCenterCountdown(3); return;
             }
@@ -516,11 +554,72 @@
             if (e.key === 'ArrowUp') { operatorHeight = Math.min(10.0, operatorHeight + 0.2); operatorPos.y = operatorHeight; document.getElementById('cam-height').innerText = operatorHeight.toFixed(2); }
             if (e.key === 'ArrowDown') { operatorHeight = Math.max(0.2, operatorHeight - 0.2); operatorPos.y = operatorHeight; document.getElementById('cam-height').innerText = operatorHeight.toFixed(2); }
             if (keyL === 'm') { isAudioMuted = !isAudioMuted; document.getElementById('audio-status').innerText = isAudioMuted ? "OFF" : "ON (動態音量)"; document.getElementById('audio-status').style.color = isAudioMuted ? "#FF6347" : "#00FF00"; }
-            if (e.key >= '0' && e.key <= '9') { windStrength = parseInt(e.key); document.getElementById('wind-status').innerText = windStrength; document.getElementById('wind-status').style.color = windStrength === 0 ? "#00FF00" : "#FF4500"; }
+            if (e.key >= '0' && e.key <= '9') setWindStrength(parseInt(e.key));
         });
 
         const droneSpeed = 0.11; const turnSpeed = 0.04; const responsiveness = 0.07; const maxTiltAngle = 0.3;     
-        let currentVelocity = { throttle: 0, yaw: 0, pitch: 0, roll: 0 }; let windTimer = 0; let targetWindX = 0; let targetWindZ = 0; let currentWindX = 0; let currentWindZ = 0; 
+        let currentVelocity = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
+        // 風速以「每秒位移」計算；風向只會在長時間穩定後小幅改變，避免不自然的突變。
+        let windTimer = 0;
+        let windHeading = -Math.PI / 2;
+        let targetWindSpeed = 0;
+        let targetWindX = 0; let targetWindZ = 0;
+        let currentWindX = 0; let currentWindZ = 0;
+
+        function windDirectionText() {
+            if (windStrength === 0 && mission.id !== 'five') return '無風';
+            // Three.js 場景中 -Z 為北；氣象風向以風「來自」的方向表示。
+            const bearing = (270 + windHeading * 180 / Math.PI + 360) % 360;
+            const names = ['北', '東北', '東', '東南', '南', '西南', '西', '西北'];
+            return `${names[Math.round(bearing / 45) % 8]}風（${Math.round(bearing)}°）`;
+        }
+
+        function updateWindDisplay() {
+            const windStatus = document.getElementById('wind-status');
+            const windDirection = document.getElementById('wind-direction');
+            windStatus.innerText = windStrength;
+            windStatus.style.color = windStrength === 0 ? '#00FF00' : '#FF4500';
+            windDirection.innerText = windDirectionText();
+            windDirection.style.color = windStrength === 0 ? '#00FF00' : '#FFD700';
+            document.getElementById('wind-base').innerText = windStrength;
+            // 文字依氣象慣例顯示來風方向；箭頭則顯示風實際吹向，方便直覺判讀漂移方向。
+            const outgoingBearing = (90 + windHeading * 180 / Math.PI + 360) % 360;
+            const windArrow = document.getElementById('wind-arrow');
+            windArrow.style.transform = `translate(-50%, -100%) rotate(${outgoingBearing}deg)`;
+            windArrow.style.opacity = windStrength === 0 ? '0.25' : '1';
+        }
+
+        function chooseNextWind() {
+            // 每 3–8 秒更新一次，且單次最多偏轉 ±30°。
+            windTimer = 3 + Math.random() * 5;
+            if (mission.id === 'five' && mission.fiveWindBaseHeading !== null) {
+                // 五邊飛行固定為東風或西風，只容許在基準來向左右 15° 內輕微擺動。
+                windHeading = mission.fiveWindBaseHeading + (Math.random() - 0.5) * (Math.PI / 6);
+            } else {
+                windHeading += (Math.random() - 0.5) * (Math.PI / 3);
+            }
+            if (windStrength === 0) {
+                targetWindSpeed = 0; targetWindX = 0; targetWindZ = 0;
+                updateWindDisplay();
+                return;
+            }
+            // 數字鍵設定的是風速上限；每段風場可在靜風（0）到上限間變化。
+            targetWindSpeed = Math.random() < 0.12 ? 0 : windStrength * Math.random();
+            const forcePerSecond = targetWindSpeed * 0.168;
+            targetWindX = Math.cos(windHeading) * forcePerSecond;
+            targetWindZ = Math.sin(windHeading) * forcePerSecond;
+            updateWindDisplay();
+        }
+
+        function setWindStrength(value) {
+            windStrength = value;
+            // 使用者切換風力時立即套用強度；非零時保留既有方向，避免跳向另一個方位。
+            windTimer = 0;
+            if (windStrength === 0) {
+                targetWindSpeed = 0; targetWindX = 0; targetWindZ = 0;
+            }
+            chooseNextWind();
+        }
         
         // --- 搖桿與校正 ---
         let gamePadMap = { roll: 0, pitch: 1, throttle: 2, yaw: 3 }; let gamePadCalib = [ { min: 0, max: 0 }, { min: 0, max: 0 }, { min: 0, max: 0 }, { min: 0, max: 0 }, { min: 0, max: 0 }, { min: 0, max: 0 } ]; let isCalibrating = false;
@@ -590,13 +689,17 @@
                 let verticalVelocity = currentVelocity.throttle * 0.035;
                 if (droneGroup.position.y <= droneYOffset + 0.001) { currentVelocity.yaw = 0; currentVelocity.roll = 0; currentVelocity.pitch = 0; if (verticalVelocity < 0) verticalVelocity = 0; }
 
-                windTimer -= 1;
-                if (windTimer <= 0) { windTimer = 60 + Math.random() * 60; if (windStrength > 0) { const angle = Math.floor(Math.random() * 8) * (Math.PI / 4); const force = (windStrength * 0.0028); targetWindX = Math.cos(angle) * force; targetWindZ = Math.sin(angle) * force; } else { targetWindX = 0; targetWindZ = 0; } }
-                currentWindX = THREE.MathUtils.lerp(currentWindX, targetWindX, 0.02); currentWindZ = THREE.MathUtils.lerp(currentWindZ, targetWindZ, 0.02); 
+                windTimer -= dt;
+                if (windTimer <= 0) chooseNextWind();
+                // 約六秒的漸變，使風向與風力變化可預期、也不受螢幕幀率影響。
+                const windBlend = 1 - Math.exp(-dt / 6);
+                currentWindX = THREE.MathUtils.lerp(currentWindX, targetWindX, windBlend);
+                currentWindZ = THREE.MathUtils.lerp(currentWindZ, targetWindZ, windBlend);
+                document.getElementById('wind-speed').innerText = (Math.hypot(currentWindX, currentWindZ) / 0.168).toFixed(1);
 
                 if (!mission.autoPilot) {
                     if (Math.abs(currentVelocity.roll) > 0.001 || Math.abs(currentVelocity.pitch) > 0.001) { droneGroup.translateX(currentVelocity.roll * droneSpeed); droneGroup.translateZ(-currentVelocity.pitch * droneSpeed); }
-                    if (droneGroup.position.y > droneYOffset + 0.02) { droneGroup.position.x += currentWindX; droneGroup.position.z += currentWindZ; }
+                    if (droneGroup.position.y > droneYOffset + 0.02) { droneGroup.position.x += currentWindX * dt; droneGroup.position.z += currentWindZ * dt; }
                     droneGroup.position.y += verticalVelocity; if (Math.abs(currentVelocity.yaw) > 0.001) droneGroup.rotation.y -= currentVelocity.yaw * turnSpeed;
                 }
 
@@ -864,6 +967,98 @@
                         // ------------------------------------------
                         // ★ 基本級：側邊懸停前進後退
                         // ------------------------------------------
+                        else if (mission.id === 'five') {
+                            const eastWind = mission.fiveWindFrom === 'east';
+                            const entryPoint = eastWind ? P.P7 : P.P3;
+                            const entryName = eastWind ? 'P7' : 'P3';
+                            const exitPoint = eastWind ? P.P3 : P.P7;
+                            const exitName = eastWind ? 'P3' : 'P7';
+                            const requiredYaw = eastWind ? -Math.PI / 2 : Math.PI / 2;
+                            const yawDiff = Math.abs(normalizeAngle(curYaw - requiredYaw));
+                            const checkpoints = eastWind ? [
+                                { x: 36, z: -1, name: '第一轉彎' },
+                                { x: 38, z: -16, name: '第二轉彎' },
+                                { x: -38, z: -16, name: '第三轉彎' },
+                                { x: -36, z: -1, name: '第四轉彎' }
+                            ] : [
+                                { x: -36, z: -1, name: '第一轉彎' },
+                                { x: -38, z: -16, name: '第二轉彎' },
+                                { x: 38, z: -16, name: '第三轉彎' },
+                                { x: 36, z: -1, name: '第四轉彎' }
+                            ];
+
+                            const showSkySensor = (point, visible = true) => {
+                                fiveSensor.visible = visible;
+                                fiveSensor.position.set(point.x, 18 + droneYOffset, point.z);
+                                const horizontalDistance = Math.hypot(droneGroup.position.x - point.x, droneGroup.position.z - point.z);
+                                const touched = horizontalDistance <= 3.0 && Math.abs(curH - 18) <= 2.5;
+                                fiveSensor.material.color.setHex(touched ? 0x39FF14 : 0xFFD700);
+                                return touched;
+                            };
+
+                            if (mission.step === 1) {
+                                targetRing.visible = true; targetRing.position.set(P.H.x, 0.03, P.H.z);
+                                fiveSensor.visible = false;
+                                if (distToH > 1.0 || Math.abs(curH - 1.8) > 0.3) {
+                                    mission.timer = 5.0;
+                                    mStatus = `<span style="color:#FFD700;">五邊飛行 1/9</span><br>保持 H 點上方 1.8m`;
+                                } else {
+                                    mission.timer -= dt;
+                                    mStatus = `<span style="color:#FFD700;">五邊飛行 1/9</span><br>定點懸停… <span style="color:#39FF14;">${Math.ceil(mission.timer)} 秒</span>`;
+                                    if (mission.timer <= 0) { mission.step = 2; targetRing.visible = false; }
+                                }
+                            }
+                            else if (mission.step === 2) {
+                                fiveSensor.visible = false;
+                                mStatus = `<span style="color:#00BFFF;">五邊飛行 2/9</span><br>請依照風向 選擇P3或者P7點`;
+                                if (distToH > 1.5 || Math.abs(curH - 1.8) > 0.5) {
+                                    mStatus += `<br><span style="color:#FF4444;">請先返回 H 點上方穩定高度</span>`;
+                                } else if (yawDiff <= THREE.MathUtils.degToRad(15)) {
+                                    mission.step = 3;
+                                }
+                            }
+                            else if (mission.step === 3) {
+                                targetRing.visible = true; targetRing.position.set(entryPoint.x, 0.03, entryPoint.z);
+                                fiveSensor.visible = false;
+                                const entryDistance = Math.hypot(droneGroup.position.x - entryPoint.x, droneGroup.position.z - entryPoint.z);
+                                mStatus = `<span style="color:#00BFFF;">五邊飛行 3/9</span><br>通過 ${entryName} 角錐，開始平滑上升`;
+                                if (entryDistance <= 1.5 && curH >= 1.5 && curH <= 4.5) {
+                                    mission.step = 4; targetRing.visible = false;
+                                }
+                            }
+                            else if (mission.step >= 4 && mission.step <= 7) {
+                                targetRing.visible = false;
+                                const point = checkpoints[mission.step - 4];
+                                const touched = showSkySensor(point, false);
+                                const routeNumber = mission.step;
+                                mStatus = mission.step === 4
+                                    ? `<span style="color:#00BFFF;">五邊飛行 4/9</span><br>平滑上升並沿著天空航道航行`
+                                    : `<span style="color:#00BFFF;">五邊飛行 ${routeNumber}/9</span><br>沿天空航道飛往${point.name}感應區`;
+                                if (mission.step > 4 && !(inTrackHeight && inOuterBox && !insideHole)) {
+                                    mStatus += `<br><span style="color:#FF4444;">請回到天空航道範圍內</span>`;
+                                }
+                                const routeValid = mission.step === 4 || (inTrackHeight && inOuterBox && !insideHole);
+                                if (touched && routeValid) {
+                                    mission.step++;
+                                    fiveSensor.material.color.setHex(0xFFD700);
+                                }
+                            }
+                            else if (mission.step === 8) {
+                                fiveSensor.visible = false;
+                                targetRing.visible = true; targetRing.position.set(exitPoint.x, 0.03, exitPoint.z);
+                                const exitDistance = Math.hypot(droneGroup.position.x - exitPoint.x, droneGroup.position.z - exitPoint.z);
+                                mStatus = `<span style="color:#00BFFF;">五邊飛行 8/9</span><br>由第四轉彎平緩下降，通過 ${exitName} 點`;
+                                if (exitDistance <= 1.5 && curH >= 1.2 && curH <= 4.5) {
+                                    mission.step = 9;
+                                }
+                            }
+                            else if (mission.step === 9) {
+                                fiveSensor.visible = false;
+                                targetRing.visible = true; targetRing.position.set(P.H.x, 0.03, P.H.z);
+                                mStatus = `<span style="color:#FFD700;">五邊飛行 9/9</span><br>返回 H 點上方 1.8m 懸停`;
+                                if (distToH <= 1.0 && Math.abs(curH - 1.8) <= 0.3) completeFiveMission();
+                            }
+                        }
                         else if (mission.id === 'side') {
                             const sideSteps = [
                                 null,
@@ -966,7 +1161,12 @@
             proxyDroneYaw.rotation.y = droneGroup.rotation.y; proxyDroneTilt.rotation.x = droneTiltGroup.rotation.x; proxyDroneTilt.rotation.z = droneTiltGroup.rotation.z; attitudeRenderer.render(attitudeScene, attitudeCamera);
 
             // 攝影機系統運算
-            if (cameraMode === 0) { camera.position.copy(operatorPos); camera.lookAt(droneGroup.position); } 
+            if (cameraMode === 0) {
+                camera.position.copy(operatorPos);
+                // 站位視角瞄準無人機與其地面投影的中間，讓高空飛行時仍保留地面參考。
+                const groundAwareTarget = new THREE.Vector3(droneGroup.position.x, (droneGroup.position.y + droneYOffset) * 0.5, droneGroup.position.z);
+                camera.lookAt(groundAwareTarget);
+            } 
             else if (cameraMode === 1) { camera.position.lerp(new THREE.Vector3(0, 4, 6).applyMatrix4(droneGroup.matrixWorld), 0.1); camera.lookAt(droneGroup.position); }
             else if (cameraMode === 2) { let nosePos = new THREE.Vector3(0, -0.02, -0.35).applyMatrix4(droneTiltGroup.matrixWorld); camera.position.copy(nosePos); camera.rotation.order = "YXZ"; camera.rotation.y = droneGroup.rotation.y; camera.rotation.x = fpvPitchAngle; camera.rotation.z = 0; }
 
