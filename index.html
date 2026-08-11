@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>台續多旋翼術科模擬器</title>
+    <title>無人機術科模擬器 - 完整修復版</title>
     <link rel="icon" href="LOGO.png">
     <style>
         body { margin: 0; overflow: hidden; background-color: #87CEEB; }
@@ -80,12 +80,13 @@
 
         /* 中央大字提示 */
         #center-message {
-            position: absolute; top: 8%; left: 50%; transform: translateX(-50%);
-            color: #FFF; font-size: 28px; font-weight: bold; text-shadow: 0 0 10px rgba(0,0,0,1);
-            background: rgba(0,0,0,0.75); padding: 20px 40px; border-radius: 10px;
+            position: absolute; top: 0; left: 15px; transform: none;
+            color: #FFF; font-size: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(0,0,0,1);
+            background: rgba(0,0,0,0.78); padding: 16px 18px; border-radius: 10px;
             border: 2px solid #00FF00; text-align: center; display: none; z-index: 200;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; pointer-events: none;
-            min-width: 450px;
+            box-sizing: border-box; width: 270px; min-width: 270px; max-width: 270px;
+            overflow-wrap: anywhere;
         }
         
         #labels-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
@@ -423,6 +424,12 @@
         const P = { H:{x:0,z:0}, P1:{x:-6,z:-12}, P2:{x:-12,z:-6}, P3:{x:-6,z:0}, P4:{x:0,z:-6}, P5:{x:6,z:-12}, P6:{x:12,z:-6}, P7:{x:6,z:0} };
         let mission = { active: false, id: 'free', step: 0, timer: 5.0, failTimer: 0, isFailed: false, completed: false, autoPilot: false, g1TargetIndex: 0, g1Triggered: false, isSpraying: false, g2SprayPrompted: false, g2StopPrompted: false, orbitAccum: 0, lastAngle: null };
         const centerMsg = document.getElementById('center-message');
+        const flightStatusHud = document.getElementById('hud-left');
+
+        function positionMissionMessage() {
+            const hudRect = flightStatusHud.getBoundingClientRect();
+            centerMsg.style.top = `${Math.round(hudRect.bottom + 12)}px`;
+        }
 
         function normalizeAngle(a) { a = a % (Math.PI * 2); if (a > Math.PI) a -= Math.PI * 2; if (a < -Math.PI) a += Math.PI * 2; return a; }
 
@@ -644,6 +651,7 @@
 
         function animate() {
             requestAnimationFrame(animate); const dt = clock.getDelta();
+            positionMissionMessage();
 
             document.getElementById('crosshair').style.display = (cameraMode === 2) ? 'block' : 'none';
 
@@ -1033,7 +1041,7 @@
                                 const routeNumber = mission.step;
                                 mStatus = mission.step === 4
                                     ? `<span style="color:#00BFFF;">五邊飛行 4/9</span><br>平滑上升並沿著天空航道航行`
-                                    : `<span style="color:#00BFFF;">五邊飛行 ${routeNumber}/9</span><br>沿天空航道飛往${point.name}感應區`;
+                                    : `<span style="color:#00BFFF;">五邊飛行 ${routeNumber}/9</span><br>沿天空航道飛往${point.name}`;
                                 if (mission.step > 4 && !(inTrackHeight && inOuterBox && !insideHole)) {
                                     mStatus += `<br><span style="color:#FF4444;">請回到天空航道範圍內</span>`;
                                 }
@@ -1186,6 +1194,7 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            positionMissionMessage();
         }
         
         startMission('free');
