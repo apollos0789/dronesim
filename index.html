@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>無人機術科模擬器 - 完整修復版</title>
+    <title>台續多旋翼術科模擬器</title>
     <link rel="icon" href="LOGO.png">
     <style>
         body { margin: 0; overflow: hidden; background-color: #87CEEB; }
@@ -464,14 +464,14 @@
 
         function startMission(id) {
             if (cdInterval) { clearInterval(cdInterval); cdInterval = null; }
-            mission = { active: false, id: id, step: 1, timer: 5.0, isFailed: false, completed: false, autoPilot: false, g1TargetIndex: 0, g1Triggered: false, isSpraying: false, g2SprayPrompted: false, g2StopPrompted: false, orbitAccum: 0, lastAngle: null, fiveWindFrom: null, fiveWindBaseHeading: null };
-            targetRing.visible = false; targetRing2.visible = false; fiveSensor.visible = false; sprayGroup.visible = false;
+            mission = { active: false, id: id, step: 1, timer: 5.0, isFailed: false, completed: false, autoPilot: false, g1TargetIndex: 0, g1Triggered: false, isSpraying: false, g2SprayPrompted: false, g2StopPrompted: false, orbitAccum: 0, lastAngle: null, fiveWindFrom: null, fiveWindBaseHeading: null, emergencyWindFrom: null, emergencyWindBaseHeading: null, emergencyStableTimer: 0.5, emergencyLastPosition: null, emergencyLastYaw: null };
+            targetRing.visible = false; targetRing.scale.set(1, 1, 1); targetRing2.visible = false; targetRing2.scale.set(1, 1, 1); fiveSensor.visible = false; sprayGroup.visible = false;
             
             document.querySelectorAll('.mission-row').forEach(r => r.classList.remove('selected'));
             const selectedRow = document.querySelector(`.mission-row[data-id="${id}"]`); if(selectedRow) selectedRow.classList.add('selected'); selectedMissionId = id;
 
             // 判斷開發中任務
-            if (['emergency', 'adv_rect'].includes(id)) {
+            if (['adv_rect'].includes(id)) {
                 centerMsg.style.display = 'block';
                 centerMsg.innerHTML = `<span style="color:#FFD700; font-size:40px; text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);">🚧 開發中 🚧</span>`;
                 setTimeout(() => { startMission('free'); }, 2000);
@@ -484,6 +484,17 @@
                 droneGroup.position.set(0, 1.8 + droneYOffset, 0); droneGroup.rotation.set(0, 0, 0); currentVelocity = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
                 mission.fiveWindFrom = Math.random() < 0.5 ? 'east' : 'west';
                 mission.fiveWindBaseHeading = mission.fiveWindFrom === 'east' ? Math.PI : 0;
+                windTimer = 0; chooseNextWind();
+                g1LineMesh.visible = false; g2LineMesh.visible = false; g3LineMesh.visible = false;
+                showCenterCountdown(3); return;
+            }
+
+            if (id === 'emergency') {
+                mission.emergencyWindFrom = Math.random() < 0.5 ? 'east' : 'west';
+                mission.emergencyWindBaseHeading = mission.emergencyWindFrom === 'east' ? Math.PI : 0;
+                const emergencyInitialYaw = mission.emergencyWindFrom === 'east' ? -Math.PI / 2 : Math.PI / 2;
+                droneGroup.position.set(0, 1.8 + droneYOffset, 0); droneGroup.rotation.set(0, emergencyInitialYaw, 0);
+                currentVelocity = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
                 windTimer = 0; chooseNextWind();
                 g1LineMesh.visible = false; g2LineMesh.visible = false; g3LineMesh.visible = false;
                 showCenterCountdown(3); return;
@@ -574,7 +585,7 @@
         let currentWindX = 0; let currentWindZ = 0;
 
         function windDirectionText() {
-            if (windStrength === 0 && mission.id !== 'five') return '無風';
+            if (windStrength === 0 && mission.id !== 'five' && mission.id !== 'emergency') return '無風';
             // Three.js 場景中 -Z 為北；氣象風向以風「來自」的方向表示。
             const bearing = (270 + windHeading * 180 / Math.PI + 360) % 360;
             const names = ['北', '東北', '東', '東南', '南', '西南', '西', '西北'];
@@ -599,9 +610,10 @@
         function chooseNextWind() {
             // 每 3–8 秒更新一次，且單次最多偏轉 ±30°。
             windTimer = 3 + Math.random() * 5;
-            if (mission.id === 'five' && mission.fiveWindBaseHeading !== null) {
-                // 五邊飛行固定為東風或西風，只容許在基準來向左右 15° 內輕微擺動。
-                windHeading = mission.fiveWindBaseHeading + (Math.random() - 0.5) * (Math.PI / 6);
+            if ((mission.id === 'five' && mission.fiveWindBaseHeading !== null) || (mission.id === 'emergency' && mission.emergencyWindBaseHeading !== null)) {
+                // 五邊飛行與緊急程序固定為東風或西風，只容許在基準來向左右 15° 內輕微擺動。
+                const fixedWindHeading = mission.id === 'five' ? mission.fiveWindBaseHeading : mission.emergencyWindBaseHeading;
+                windHeading = fixedWindHeading + (Math.random() - 0.5) * (Math.PI / 6);
             } else {
                 windHeading += (Math.random() - 0.5) * (Math.PI / 3);
             }
@@ -975,6 +987,110 @@
                         // ------------------------------------------
                         // ★ 基本級：側邊懸停前進後退
                         // ------------------------------------------
+                        else if (mission.id === 'emergency') {
+                            const eastWind = mission.emergencyWindFrom === 'east';
+                            const entryPoint = eastWind ? P.P7 : P.P3;
+                            const entryName = eastWind ? 'P7' : 'P3';
+                            const firstTurn = { x: eastWind ? 36 : -36, z: -1 };
+                            const emergencyPoint = { x: eastWind ? 38 : -38, z: -8.5 };
+                            const returnCenter = { x: eastWind ? 6 : -6, z: -6 };
+                            const returnSide = eastWind ? '右側' : '左側';
+
+                            const showEmergencySensor = (point, visible = true) => {
+                                fiveSensor.visible = visible;
+                                fiveSensor.position.set(point.x, 18 + droneYOffset, point.z);
+                                const horizontalDistance = Math.hypot(
+                                    droneGroup.position.x - point.x,
+                                    droneGroup.position.z - point.z
+                                );
+                                const touched = horizontalDistance <= 3.0 && Math.abs(curH - 18) <= 2.5;
+                                fiveSensor.material.color.setHex(touched ? 0x39FF14 : 0xFFD700);
+                                return touched;
+                            };
+
+                            if (mission.step === 1) {
+                                targetRing.visible = true;
+                                targetRing.position.set(entryPoint.x, 0.03, entryPoint.z);
+                                fiveSensor.visible = false;
+                                const entryDistance = Math.hypot(
+                                    droneGroup.position.x - entryPoint.x,
+                                    droneGroup.position.z - entryPoint.z
+                                );
+                                mStatus = `<span style="color:#00BFFF;">緊急處置程序 1/6</span><br>前往面前的 ${entryName} 點`;
+                                if (entryDistance <= 1.5 && curH >= 1.2 && curH <= 4.5) {
+                                    mission.step = 2;
+                                    targetRing.visible = false;
+                                }
+                            }
+                            else if (mission.step === 2) {
+                                targetRing.visible = false;
+                                const touched = showEmergencySensor(firstTurn, false);
+                                mStatus = `<span style="color:#00BFFF;">緊急處置程序 2/6</span><br>平滑上升並沿著天空航道前進`;
+                                if (touched) {
+                                    mission.step = 3;
+                                    fiveSensor.visible = false;
+                                    fiveSensor.material.color.setHex(0xFFD700);
+                                }
+                            }
+                            else if (mission.step === 3) {
+                                targetRing.visible = false;
+                                fiveSensor.visible = false;
+                                const emergencyDistance = Math.hypot(
+                                    droneGroup.position.x - emergencyPoint.x,
+                                    droneGroup.position.z - emergencyPoint.z
+                                );
+                                const insideSkyRoute = inTrackHeight && inOuterBox && !insideHole;
+                                mStatus = `<span style="color:#00BFFF;">緊急處置程序 3/6</span><br>沿著天空航道航行`;
+                                if (!insideSkyRoute) {
+                                    mStatus += `<br><span style="color:#FF4444;">請保持在天空航道範圍內</span>`;
+                                }
+                                if (emergencyDistance <= 3.0 && insideSkyRoute) {
+                                    mission.step = 4;
+                                    mission.emergencyStableTimer = 0.5;
+                                    mission.emergencyLastPosition = droneGroup.position.clone();
+                                    mission.emergencyLastYaw = curYaw;
+                                }
+                            }
+                            else if (mission.step === 4) {
+                                targetRing.visible = false;
+                                fiveSensor.visible = false;
+                                const lastPosition = mission.emergencyLastPosition || droneGroup.position.clone();
+                                const displacement = droneGroup.position.distanceTo(lastPosition);
+                                const yawMovement = Math.abs(normalizeAngle(curYaw - (mission.emergencyLastYaw ?? curYaw)));
+                                const movementSpeed = displacement / Math.max(dt, 0.001);
+                                const yawSpeed = yawMovement / Math.max(dt, 0.001);
+                                mission.emergencyLastPosition = droneGroup.position.clone();
+                                mission.emergencyLastYaw = curYaw;
+
+                                if (movementSpeed <= 0.12 && yawSpeed <= 0.15) {
+                                    mission.emergencyStableTimer -= dt;
+                                } else {
+                                    mission.emergencyStableTimer = 0.5;
+                                }
+
+                                mStatus = `<span style="color:#FF4444; font-size:34px; font-weight:bold;">緊急返航<br>請穩定機身</span>`;
+                                if (mission.emergencyStableTimer <= 0) {
+                                    mission.step = 5;
+                                    showCenterCountdown(3, () => {
+                                        if (mission.id === 'emergency') mission.step = 6;
+                                    });
+                                    // 避免本幀末端的任務提示覆蓋倒數第一個「3」。
+                                    mStatus = "";
+                                }
+                            }
+                            else if (mission.step === 6) {
+                                targetRing.visible = true;
+                                targetRing.scale.setScalar(4 / 1.5);
+                                targetRing.position.set(returnCenter.x, 0.03, returnCenter.z);
+                                fiveSensor.visible = false;
+                                const returnDistance = Math.hypot(
+                                    droneGroup.position.x - returnCenter.x,
+                                    droneGroup.position.z - returnCenter.z
+                                );
+                                mStatus = `<span style="color:#00BFFF;">緊急處置程序 6/6</span><br>前往${returnSide}八字圓中心並降落`;
+                                if (returnDistance <= 4.0 && curH <= 0.2) completeMission();
+                            }
+                        }
                         else if (mission.id === 'five') {
                             const eastWind = mission.fiveWindFrom === 'east';
                             const entryPoint = eastWind ? P.P7 : P.P3;
@@ -1064,7 +1180,7 @@
                                 fiveSensor.visible = false;
                                 targetRing.visible = true; targetRing.position.set(P.H.x, 0.03, P.H.z);
                                 mStatus = `<span style="color:#FFD700;">五邊飛行 9/9</span><br>返回 H 點上方 1.8m 懸停`;
-                                if (distToH <= 1.0 && Math.abs(curH - 1.8) <= 0.3) completeFiveMission();
+                                if (distToH <= 1.0 && Math.abs(curH - 1.8) <= 0.3) completeMission();
                             }
                         }
                         else if (mission.id === 'side') {
@@ -1148,7 +1264,8 @@
                         }
                     }
                     // 更新中央文字顯示
-                    if(mStatus !== "") { centerMsg.innerHTML = mStatus; }
+                    // completeMission() 會在同一幀切換為完成狀態；此時不可再用最後一步提示覆蓋結算畫面。
+                    if (mStatus !== "" && mission.active && !mission.completed) { centerMsg.innerHTML = mStatus; }
                 }
             } // END OF if(!isPaused) BLOCK
 
