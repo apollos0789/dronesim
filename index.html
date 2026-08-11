@@ -1088,7 +1088,7 @@
                                     droneGroup.position.z - returnCenter.z
                                 );
                                 mStatus = `<span style="color:#00BFFF;">緊急處置程序 6/6</span><br>前往${returnSide}八字圓中心並降落`;
-                                if (returnDistance <= 4.0 && curH <= 0.2) completeMission();
+                                if (returnDistance <= 4.0 && curH <= 0.001) completeMission();
                             }
                         }
                         else if (mission.id === 'five') {
