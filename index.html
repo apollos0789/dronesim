@@ -14,7 +14,7 @@
             position: absolute; top: 15px; left: 15px; color: white;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 16px; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
-            pointer-events: none; background: rgba(0, 0, 0, 0.65);
+            pointer-events: auto; background: rgba(0, 0, 0, 0.65);
             padding: 15px; border-radius: 8px; min-width: 240px; z-index: 10;
         }
         #hud-left h2 { font-size: 18px; margin: 0 0 10px 0; color: #00BFFF; border-bottom: 1px solid #555; padding-bottom: 5px; }
@@ -69,14 +69,15 @@
         .collapsible-content { transition: max-height 0.3s ease-out, opacity 0.2s ease-out, margin 0.3s ease-out; overflow: hidden; max-height: 1500px; opacity: 1; }
         .collapsible-content.hidden { max-height: 0; opacity: 0; margin-top: 0; border: none; }
         
-        #telemetry-box { font-family: 'Courier New', monospace; font-size: 13px; color: #FF8C00; white-space: pre-wrap; line-height: 1.4; height: 130px; }
         #attitude-view { width: 100%; border-radius: 4px; background: rgba(30, 15, 0, 0.5); border: 1px solid #663300; height: 135px; position: relative; }
 
         /* 底部提示 */
         #controls-hint {
             position: absolute; bottom: 20px; left: 20px; color: white; background: rgba(0, 0, 0, 0.7);
-            padding: 12px; border-radius: 5px; font-family: Arial, sans-serif; line-height: 1.6; pointer-events: none; z-index: 10; font-size: 14px;
+            padding: 12px; border-radius: 8px; font-family: Arial, sans-serif; line-height: 1.6; pointer-events: auto; z-index: 10; font-size: 14px;
         }
+        #controls-hint h2 { font-size: 14px; margin: 0 0 8px 0; color: #00BFFF; border-bottom: 1px solid #555; padding-bottom: 4px; font-family: 'Segoe UI', sans-serif; }
+        #controls-content { max-width: 760px; }
 
         /* 中央大字提示 */
         #center-message {
@@ -94,13 +95,49 @@
 
         /* 中央設定面版 */
         #settings-modal {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 25, 0.95); border: 2px solid #00BFFF; border-radius: 10px; padding: 25px; color: white; font-family: 'Segoe UI', sans-serif; z-index: 200; display: none; min-width: 350px; pointer-events: auto;
+            position: absolute; top: 18px; left: 50%; transform: translateX(-50%); background: rgba(20, 20, 25, 0.97); border: 2px solid #00BFFF; border-radius: 10px; padding: 22px; color: white; font-family: 'Segoe UI', sans-serif; z-index: 200; display: none; width: min(620px, calc(100vw - 40px)); max-height: calc(100vh - 225px); overflow-y: auto; box-sizing: border-box; pointer-events: auto;
         }
         #settings-modal h2 { margin-top: 0; color: #00BFFF; border-bottom: 1px solid #555; padding-bottom: 10px; text-align: center;}
-        .setting-row { margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
-        .setting-row select { padding: 6px; background: #333; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer;}
+        .settings-section-title { margin: 12px 0 8px; color: #FFD700; font-weight: bold; font-size: 14px; }
+        .mapping-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .setting-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; padding: 9px 10px; font-size: 14px; background: rgba(255,255,255,0.055); border: 1px solid #444; border-radius: 6px; }
+        .setting-row small { grid-column: 1 / -1; color: #999; }
+        .setting-row select { min-width: 90px; padding: 6px; background: #333; color: white; border: 1px solid #666; border-radius: 4px; cursor: pointer;}
         .calib-btn { width: 100%; padding: 12px; background: #FF8C00; color: white; border: none; font-weight: bold; font-size: 15px; cursor: pointer; margin-top: 15px; border-radius: 5px; transition: background 0.2s;}
-        .calib-status { margin-top: 10px; font-family: monospace; font-size: 13px; color: #39FF14; background: #111; padding: 10px; border-radius: 5px; line-height: 1.5; text-align: left; display: none; }
+        .calib-btn:hover { background: #ffa52f; }
+        .calib-next-btn { display: none; width: 100%; padding: 11px; margin-top: 8px; border: none; border-radius: 5px; background: #008CBA; color: #FFF; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .calib-next-btn:hover { background: #00A0D2; }
+        #stick-hud { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 210; display: flex; gap: 18px; pointer-events: none; }
+        .stick-pad { position: relative; width: 88px; height: 88px; border-radius: 9px; border: 2px solid rgba(220,230,220,.52); background: rgba(20,45,25,.34); overflow: hidden; box-shadow: inset 0 0 14px rgba(0,0,0,.45); }
+        .stick-pad::before, .stick-pad::after { content: ''; position: absolute; background: rgba(255,255,255,.38); }
+        .stick-pad::before { left: 50%; top: 0; width: 1px; height: 100%; }
+        .stick-pad::after { left: 0; top: 50%; width: 100%; height: 1px; }
+        .stick-dot { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: #E8FFE8; border: 2px solid #39FF14; box-shadow: 0 0 12px #39FF14; transform: translate(-50%, -50%); transition: transform .04s linear; }
+        .calib-status { margin-top: 12px; color: #FFF; background: #111; padding: 12px; border-radius: 6px; line-height: 1.55; text-align: center; display: none; border: 1px solid #444; }
+        .calib-step { color: #00BFFF; font-weight: bold; margin-bottom: 3px; }
+        .calib-instruction { font-size: 17px; font-weight: bold; }
+        .calib-detail { margin-top: 4px; color: #AAA; font-size: 13px; }
+        .calib-progress { display: flex; justify-content: center; gap: 7px; margin-top: 9px; }
+        .calib-progress span { width: 9px; height: 9px; border-radius: 50%; background: #555; }
+        .calib-progress span.done { background: #39FF14; box-shadow: 0 0 6px #39FF14; }
+        .calib-progress span.active { background: #FFD700; box-shadow: 0 0 6px #FFD700; }
+        .guide-sticks { display: none; justify-content: center; gap: 34px; margin: 12px 0 5px; }
+        .guide-stick { text-align: center; color: #AAA; font-size: 12px; }
+        .guide-pad { position: relative; width: 100px; height: 100px; margin-top: 5px; border: 2px solid rgba(180,210,180,.65); border-radius: 10px; background: rgba(30,70,35,.28); overflow: visible; box-shadow: inset 0 0 14px rgba(0,0,0,.55); }
+        .guide-pad::before, .guide-pad::after { content: ''; position: absolute; background: rgba(255,255,255,.32); }
+        .guide-pad::before { left: 50%; top: 0; width: 1px; height: 100%; }
+        .guide-pad::after { left: 0; top: 50%; width: 100%; height: 1px; }
+        .guide-dot { position: absolute; z-index: 2; left: 50%; top: 50%; width: 15px; height: 15px; border: 2px solid #D8FFD8; border-radius: 50%; background: #39FF14; box-shadow: 0 0 13px #39FF14; transform: translate(-50%, -50%); }
+        .guide-dot.move-up { animation: guideMoveUp 1s ease-in-out infinite; }
+        .guide-dot.move-right { animation: guideMoveRight 1s ease-in-out infinite; }
+        .guide-dot.move-corners { animation: guideMoveCorners 2.4s ease-in-out infinite; }
+        @keyframes guideMoveUp { 0%, 12% { left: 50%; top: 50%; } 72%, 100% { left: 50%; top: 10%; } }
+        @keyframes guideMoveRight { 0%, 12% { left: 50%; top: 50%; } 72%, 100% { left: 90%; top: 50%; } }
+        @keyframes guideMoveCorners { 0% { left: 50%; top: 50%; } 18% { left: 10%; top: 10%; } 38% { left: 90%; top: 10%; } 58% { left: 90%; top: 90%; } 78% { left: 10%; top: 90%; } 100% { left: 50%; top: 50%; } }
+        .guide-burst { position: absolute; z-index: 5; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+        .guide-particle { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #39FF14; box-shadow: 0 0 7px #39FF14; animation: guideParticleBurst .55s ease-out forwards; }
+        @keyframes guideParticleBurst { from { opacity: 1; transform: rotate(var(--angle)) translateX(0) scale(1.4); } to { opacity: 0; transform: rotate(var(--angle)) translateX(var(--distance)) scale(.2); } }
+        @media (max-width: 620px) { .mapping-grid { grid-template-columns: 1fr; } #stick-hud { bottom: 8px; transform: translateX(-50%) scale(.85); transform-origin: bottom center; } }
 
         #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 30px; height: 30px; pointer-events: none; display: none; z-index: 50; }
         #crosshair::before { content: ''; position: absolute; top: 14px; left: 0; width: 30px; height: 2px; background: rgba(0, 255, 0, 0.8); box-shadow: 0 0 4px #000; }
@@ -109,19 +146,19 @@
 </head>
 <body>
     <div id="hud-left">
-        <h2>✈️ 飛行狀態</h2>
-        <div class="data-row">機體高度: <span id="altitude" class="data-val">0.00</span> m</div>
-        <div class="data-row">X 軸座標: <span id="pos-x" class="data-val">0.00</span> m</div>
-        <div class="data-row">Z 軸座標: <span id="pos-z" class="data-val">0.00</span> m</div>
-        <div style="margin: 8px 0; border-top: 1px dashed #555;"></div>
-        <div class="data-row">視角模式: <span id="camera-mode" class="data-val" style="color: #00FF00;">站位視角 (追蹤)</span></div>
-        <div class="data-row">視角高度: <span id="cam-height" class="data-val">3.40</span> m</div>
-        <div class="data-row">目前焦距: <span id="zoom-level" class="data-val">1.5</span>x</div>
-        <div style="margin: 8px 0; border-top: 1px dashed #555;"></div>
-        <div class="data-row">環境風力: 等級 <span id="wind-status" class="data-val" style="color: #00FF00;">0</span></div>
-        <div class="data-row">動態音效: <span id="audio-status" class="data-val" style="color: #FF6347;">等待操作解鎖...</span></div>
-        <div class="data-row" style="margin-top: 10px; color: #aaa; font-size: 14px;">
-            <span id="gamepad-status" style="color: #FF6347;">未連接控制器</span>
+        <h2>✈️ 飛行狀態 <span id="toggle-flight-status" class="toggle-btn" title="收起面板">➖</span></h2>
+        <div id="flight-status-content" class="collapsible-content">
+            <div class="data-row">機體高度: <span id="altitude" class="data-val">0.00</span> m</div>
+            <div style="margin: 8px 0; border-top: 1px dashed #555;"></div>
+            <div class="data-row">視角模式: <span id="camera-mode" class="data-val" style="color: #00FF00;">站位視角 (追蹤)</span></div>
+            <div class="data-row">視角高度: <span id="cam-height" class="data-val">3.40</span> m</div>
+            <div class="data-row">目前焦距: <span id="zoom-level" class="data-val">1.5</span>x</div>
+            <div style="margin: 8px 0; border-top: 1px dashed #555;"></div>
+            <div class="data-row">環境風力: 等級 <span id="wind-status" class="data-val" style="color: #00FF00;">0</span></div>
+            <div class="data-row">動態音效: <span id="audio-status" class="data-val" style="color: #FF6347;">等待操作解鎖…</span></div>
+            <div class="data-row" style="margin-top: 10px; color: #aaa; font-size: 14px;">
+                <span id="gamepad-status" style="color: #FF6347;">未連接控制器</span>
+            </div>
         </div>
     </div>
 
@@ -149,23 +186,34 @@
     </div>
 
     <div id="settings-modal">
-        <h2>⚙️ 遙控器通道設定</h2>
-        <div class="setting-row"><span>升降 (Throttle):</span><select id="map-throttle"><option value="0">Axis 0</option><option value="1">Axis 1</option><option value="2" selected>Axis 2</option><option value="3">Axis 3</option><option value="4">Axis 4</option><option value="5">Axis 5</option></select></div>
-        <div class="setting-row"><span>偏航 (Yaw/轉向):</span><select id="map-yaw"><option value="0">Axis 0</option><option value="1">Axis 1</option><option value="2">Axis 2</option><option value="3" selected>Axis 3</option><option value="4">Axis 4</option><option value="5">Axis 5</option></select></div>
-        <div class="setting-row"><span>俯仰 (Pitch/前後):</span><select id="map-pitch"><option value="0">Axis 0</option><option value="1" selected>Axis 1</option><option value="2">Axis 2</option><option value="3">Axis 3</option><option value="4">Axis 4</option><option value="5">Axis 5</option></select></div>
-        <div class="setting-row"><span>翻滾 (Roll/左右):</span><select id="map-roll"><option value="0" selected>Axis 0</option><option value="1">Axis 1</option><option value="2">Axis 2</option><option value="3">Axis 3</option><option value="4">Axis 4</option><option value="5">Axis 5</option></select></div>
-        <button id="calib-btn" class="calib-btn">開始搖桿校正 (點擊後推動搖桿極限)</button>
-        <div id="calib-status" class="calib-status">按 ESC 可直接關閉面板儲存設定</div>
+        <h2>⚙️ 搖桿設定與校正</h2>
+        <div class="settings-section-title">手動通道設定</div>
+        <div class="mapping-grid">
+            <label class="setting-row"><span>油門（上下）</span><select id="map-throttle"><option value="0">軸 0</option><option value="1">軸 1</option><option value="2" selected>軸 2</option><option value="3">軸 3</option><option value="4">軸 4</option><option value="5">軸 5</option></select><small>控制機體升降</small></label>
+            <label class="setting-row"><span>偏航（左右）</span><select id="map-yaw"><option value="0">軸 0</option><option value="1">軸 1</option><option value="2">軸 2</option><option value="3" selected>軸 3</option><option value="4">軸 4</option><option value="5">軸 5</option></select><small>控制機頭轉向</small></label>
+            <label class="setting-row"><span>俯仰（前後）</span><select id="map-pitch"><option value="0">軸 0</option><option value="1" selected>軸 1</option><option value="2">軸 2</option><option value="3">軸 3</option><option value="4">軸 4</option><option value="5">軸 5</option></select><small>控制機體前進／後退</small></label>
+            <label class="setting-row"><span>橫滾（左右）</span><select id="map-roll"><option value="0" selected>軸 0</option><option value="1">軸 1</option><option value="2">軸 2</option><option value="3">軸 3</option><option value="4">軸 4</option><option value="5">軸 5</option></select><small>控制機體左移／右移</small></label>
+        </div>
+
+        <div id="guide-sticks" class="guide-sticks">
+            <div class="guide-stick">左搖桿<div class="guide-pad"><span id="guide-left-dot" class="guide-dot"></span><span id="guide-left-burst" class="guide-burst"></span></div></div>
+            <div class="guide-stick">右搖桿<div class="guide-pad"><span id="guide-right-dot" class="guide-dot"></span><span id="guide-right-burst" class="guide-burst"></span></div></div>
+        </div>
+
+        <button id="calib-btn" class="calib-btn">開始引導設定與校正</button>
+        <div id="calib-status" class="calib-status"></div>
+        <button id="calib-next-btn" class="calib-next-btn">搖桿已置中，開始設定</button>
     </div>
 
     <div id="center-message">請選擇關卡並按下開始</div>
     <div id="crosshair"></div>
 
+    <div id="stick-hud">
+        <div class="stick-pad"><span id="left-stick-dot" class="stick-dot"></span></div>
+        <div class="stick-pad"><span id="right-stick-dot" class="stick-dot"></span></div>
+    </div>
+
     <div id="bottom-panels">
-        <div class="panel-box">
-            <h2>&nbsp;📊 動態慣性數值 <span id="toggle-telemetry" class="toggle-btn" title="收起/展開面板">➖</span></h2>
-            <div id="telemetry-box" class="collapsible-content">等待輸入...</div>
-        </div>
         <div class="panel-box">
             <h2>&nbsp;🌬️ 風向 <span id="toggle-wind" class="toggle-btn" title="收起/展開面板">➖</span></h2>
             <div id="wind-view" class="collapsible-content">
@@ -180,11 +228,14 @@
     </div>
 
     <div id="controls-hint">
-        ⌨️ <strong>[ 空白鍵 ]</strong> 任務流程觸發鍵<br>
-        ⌨️ <strong>[ C ]</strong> 切換視角 | <strong>[ ↑ ] / [ ↓ ]</strong> 視角高度 | <strong>[ I ] / [ O ] 或 [ 滾輪 ]</strong> 焦距縮放<br>
-        ⌨️ <strong>[ A ] / [ Z ]</strong> 調整雲台仰俯角 (FPV模式下使用)<br>
-        ⌨️ <strong>[ M ]</strong> 靜音開關 | <strong>[ 0 - 9 ]</strong> 設定風力 | <strong>[ R ]</strong> 重置位置<br>
-        ⌨️ <strong>[ ESC ]</strong> 呼叫搖桿設定與校正面板
+        <h2>⌨️ 按鍵說明 <span id="toggle-controls" class="toggle-btn" title="收起面板">➖</span></h2>
+        <div id="controls-content" class="collapsible-content">
+            <strong>[ 空白鍵 ]</strong> 觸發任務流程<br>
+            <strong>[ C ]</strong> 切換視角 | <strong>[ ↑ ] / [ ↓ ]</strong> 調整視角高度 | <strong>[ I ] / [ O ] 或 [ 滾輪 ]</strong> 調整焦距<br>
+            <strong>[ A ] / [ Z ]</strong> 調整雲台仰俯角（FPV 模式）<br>
+            <strong>[ M ]</strong> 開啟／關閉靜音 | <strong>[ 0–9 ]</strong> 設定風力 | <strong>[ R ]</strong> 重置位置<br>
+            <strong>[ ESC ]</strong> 開啟搖桿設定與校正面板
+        </div>
     </div>
 
     <div id="labels-container"></div>
@@ -415,7 +466,7 @@
                 e.target.innerText = content.classList.contains('hidden') ? '➕' : '➖'; e.target.title = content.classList.contains('hidden') ? '展開面板' : '收起面板';
             });
         }
-        togglePanel('toggle-mission', 'mission-content'); togglePanel('toggle-telemetry', 'telemetry-box'); togglePanel('toggle-wind', 'wind-view'); togglePanel('toggle-attitude', 'attitude-view');
+        togglePanel('toggle-mission', 'mission-content'); togglePanel('toggle-flight-status', 'flight-status-content'); togglePanel('toggle-controls', 'controls-content'); togglePanel('toggle-wind', 'wind-view'); togglePanel('toggle-attitude', 'attitude-view');
 
         let selectedMissionId = 'free';
         document.querySelectorAll('.mission-row').forEach(row => { row.addEventListener('click', (e) => { document.querySelectorAll('.mission-row').forEach(r => r.classList.remove('selected')); e.target.classList.add('selected'); selectedMissionId = e.target.getAttribute('data-id'); }); });
@@ -432,6 +483,55 @@
         }
 
         function normalizeAngle(a) { a = a % (Math.PI * 2); if (a > Math.PI) a -= Math.PI * 2; if (a < -Math.PI) a += Math.PI * 2; return a; }
+
+        const missionDisplayNames = {
+            hover: '基本級四面懸停',
+            eight: '基本級八字水平圓',
+            side: '基本級側邊懸停前進後退',
+            five: '基本級高度保持五邊飛行',
+            emergency: '基本級緊急處置程序',
+            adv_hover: '高級四面懸停',
+            adv_eight: '高級八字水平圓',
+            adv_rect: '高級矩形航線',
+            adv_g1: 'G1 儀表飛行測驗',
+            adv_g2: 'G2 任務模式飛行',
+            adv_g3: 'G3 興趣點飛行'
+        };
+
+        function normalizeMissionPrompt(html) {
+            if (!html || !missionDisplayNames[mission.id]) return html;
+
+            let normalized = html
+                .replace(/H點/g, 'H 點')
+                .replace(/P([1-7])點/g, 'P$1 點')
+                .replace(/P([1-7])角錐/g, 'P$1 角錐')
+                .replace(/([\u4e00-\u9fff])H\s*點/g, '$1 H 點')
+                .replace(/([\u4e00-\u9fff])P([1-7])\s*(點|角錐)/g, '$1 P$2 $3')
+                .replace(/(\d+)點鐘/g, '$1 點鐘')
+                .replace(/(\d+(?:\.\d+)?)m\b/g, '$1 m')
+                .replace(/(\d+(?:\.\d+)?)公尺/g, '$1 m')
+                .replace(/(\d+(?:\.\d+)?)秒/g, '$1 秒')
+                .replace(/3~5 m/g, '3–5 m')
+                .replace(/FPV模式/g, 'FPV 模式')
+                .replace(/\.\.\./g, '…');
+
+            let stepText = '';
+            const stepPatterns = [
+                /<span[^>]*>(?:G[123]\s+)?步驟\s+([\d.]+)\/(\d+)<\/span><br>/,
+                /<span[^>]*>(?:矩形航線|緊急處置程序|五邊飛行)\s+([\d.]+)\/(\d+)<\/span><br>/
+            ];
+            for (const pattern of stepPatterns) {
+                const match = normalized.match(pattern);
+                if (match) {
+                    stepText = `｜步驟 ${match[1]}/${match[2]}`;
+                    normalized = normalized.replace(pattern, '');
+                    break;
+                }
+            }
+
+            const header = `<span style="color:#00BFFF;">${missionDisplayNames[mission.id]}${stepText}</span>`;
+            return `${header}<br>${normalized}`;
+        }
 
         function showCenterCountdown(startCount, callback) {
             mission.active = false; let count = startCount; centerMsg.style.display = 'block'; centerMsg.innerHTML = `<span style="font-size:80px; color:#FF4500;">${count}</span>`;
@@ -464,14 +564,14 @@
 
         function startMission(id) {
             if (cdInterval) { clearInterval(cdInterval); cdInterval = null; }
-            mission = { active: false, id: id, step: 1, timer: 5.0, isFailed: false, completed: false, autoPilot: false, g1TargetIndex: 0, g1Triggered: false, isSpraying: false, g2SprayPrompted: false, g2StopPrompted: false, orbitAccum: 0, lastAngle: null, fiveWindFrom: null, fiveWindBaseHeading: null, emergencyWindFrom: null, emergencyWindBaseHeading: null, emergencyStableTimer: 0.5, emergencyLastPosition: null, emergencyLastYaw: null };
+            mission = { active: false, id: id, step: 1, timer: 5.0, isFailed: false, completed: false, autoPilot: false, g1TargetIndex: 0, g1Triggered: false, isSpraying: false, g2SprayPrompted: false, g2StopPrompted: false, orbitAccum: 0, lastAngle: null, fiveWindFrom: null, fiveWindBaseHeading: null, emergencyWindFrom: null, emergencyWindBaseHeading: null, emergencyStableTimer: 0.5, emergencyLastPosition: null, emergencyLastYaw: null, rectPhase: null, rectRightTurn: 0, rectLastYaw: null };
             targetRing.visible = false; targetRing.scale.set(1, 1, 1); targetRing2.visible = false; targetRing2.scale.set(1, 1, 1); fiveSensor.visible = false; sprayGroup.visible = false;
             
             document.querySelectorAll('.mission-row').forEach(r => r.classList.remove('selected'));
             const selectedRow = document.querySelector(`.mission-row[data-id="${id}"]`); if(selectedRow) selectedRow.classList.add('selected'); selectedMissionId = id;
 
             // 判斷開發中任務
-            if (['adv_rect'].includes(id)) {
+            if ([].includes(id)) {
                 centerMsg.style.display = 'block';
                 centerMsg.innerHTML = `<span style="color:#FFD700; font-size:40px; text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);">🚧 開發中 🚧</span>`;
                 setTimeout(() => { startMission('free'); }, 2000);
@@ -496,6 +596,14 @@
                 droneGroup.position.set(0, 1.8 + droneYOffset, 0); droneGroup.rotation.set(0, emergencyInitialYaw, 0);
                 currentVelocity = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
                 windTimer = 0; chooseNextWind();
+                g1LineMesh.visible = false; g2LineMesh.visible = false; g3LineMesh.visible = false;
+                showCenterCountdown(3); return;
+            }
+
+            if (id === 'adv_rect') {
+                droneGroup.position.set(0, 1.8 + droneYOffset, 0);
+                droneGroup.rotation.set(0, 0, 0);
+                currentVelocity = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
                 g1LineMesh.visible = false; g2LineMesh.visible = false; g3LineMesh.visible = false;
                 showCenterCountdown(3); return;
             }
@@ -525,7 +633,7 @@
             const keyL = e.key.toLowerCase();
             if (e.key === 'Escape') { 
                 const modal = document.getElementById('settings-modal'); modal.style.display = modal.style.display === 'block' ? 'none' : 'block'; 
-                if(modal.style.display === 'none') { isCalibrating = false; document.getElementById('calib-btn').innerText = "開始搖桿校正 (點擊後推動搖桿極限)"; document.getElementById('calib-status').style.display = 'none'; }
+                if (modal.style.display === 'none' && isCalibrating) stopCalibration(false);
             }
             if (isPaused) return;
             if (keyL === 'a') keyState.a = true; if (keyL === 'z') keyState.z = true;
@@ -640,23 +748,268 @@
             chooseNextWind();
         }
         
-        // --- 搖桿與校正 ---
-        let gamePadMap = { roll: 0, pitch: 1, throttle: 2, yaw: 3 }; let gamePadCalib = [ { min: 0, max: 0 }, { min: 0, max: 0 }, { min: 0, max: 0 }, { min: 0, max: 0 }, { min: 0, max: 0 }, { min: 0, max: 0 } ]; let isCalibrating = false;
-        ['roll', 'pitch', 'throttle', 'yaw'].forEach(ch => { document.getElementById(`map-${ch}`).addEventListener('change', (e) => { gamePadMap[ch] = parseInt(e.target.value); }); });
-        
-        document.getElementById('calib-btn').addEventListener('click', (e) => {
-            isCalibrating = !isCalibrating; const statusBox = document.getElementById('calib-status');
-            if (isCalibrating) { 
-                e.target.innerText = "🛑 儲存並結束校正"; statusBox.style.display = 'block'; statusBox.innerHTML = "<span style='color:#FFF;'>讀取中...</span>"; 
-                for (let i=0; i<6; i++) gamePadCalib[i] = { min: 99, max: -99 }; // reset
-            } else { 
-                e.target.innerText = "開始搖桿校正 (點擊後推動搖桿極限)"; statusBox.innerHTML = "<span style='color:#39FF14;'>校正完成！按 ESC 關閉面板。</span>"; 
-            }
+        // --- 搖桿與引導式校正 ---
+        let gamePadMap = { roll: 0, pitch: 1, throttle: 2, yaw: 3 };
+        let gamePadInvert = { roll: 1, pitch: 1, throttle: 1, yaw: 1 };
+        let gamePadCalib = Array.from({ length: 6 }, () => ({ min: 0, max: 0, center: 0 }));
+        let isCalibrating = false;
+        let calibrationWizard = { step: 0, centers: [], assigned: [], stableTime: 0, lastAxes: null, candidateAxis: null, candidateTime: 0, transitioning: false };
+        const calibrationChannels = [
+            { channel: 'throttle', instruction: '將油門軸向上推到底' },
+            { channel: 'yaw', instruction: '將偏航軸向右推到底' },
+            { channel: 'pitch', instruction: '將俯仰軸向上推到底' },
+            { channel: 'roll', instruction: '將橫滾軸向右推到底' }
+        ];
+
+        ['roll', 'pitch', 'throttle', 'yaw'].forEach(ch => {
+            document.getElementById(`map-${ch}`).addEventListener('change', (e) => {
+                gamePadMap[ch] = parseInt(e.target.value);
+                gamePadInvert[ch] = 1;
+            });
         });
 
-        function getCalibratedAxis(pad, idx) { 
-            if (!pad || pad.axes[idx] === undefined) return 0; let raw = pad.axes[idx]; let cal = gamePadCalib[idx]; if (!cal || (cal.max - cal.min <= 0.1)) return raw; 
-            let norm = ((raw - cal.min) / (cal.max - cal.min)) * 2 - 1; return Math.max(-1, Math.min(1, norm)); 
+        function calibrationProgressHtml(step) {
+            return `<div class="calib-progress">${Array.from({ length: 6 }, (_, i) => `<span class="${i + 1 < step ? 'done' : i + 1 === step ? 'active' : ''}"></span>`).join('')}</div>`;
+        }
+
+        function showCalibrationStep(step, instruction, detail = '') {
+            const statusBox = document.getElementById('calib-status');
+            statusBox.style.display = 'block';
+            statusBox.innerHTML = `<div class="calib-step">步驟 ${step}/6</div><div class="calib-instruction">${instruction}</div>${detail ? `<div class="calib-detail">${detail}</div>` : ''}${calibrationProgressHtml(step)}`;
+            updateGuideAnimation(step);
+        }
+
+        function updateGuideAnimation(step) {
+            const leftDot = document.getElementById('guide-left-dot');
+            const rightDot = document.getElementById('guide-right-dot');
+            let leftClass = 'guide-dot';
+            let rightClass = 'guide-dot';
+            if (step === 2) leftClass += ' move-up';
+            if (step === 3) leftClass += ' move-right';
+            if (step === 4) rightClass += ' move-up';
+            if (step === 5) rightClass += ' move-right';
+            if (step === 6) {
+                leftClass += ' move-corners';
+                rightClass += ' move-corners';
+            }
+            if (leftDot.className !== leftClass) leftDot.className = leftClass;
+            if (rightDot.className !== rightClass) rightDot.className = rightClass;
+        }
+
+        function triggerGuideBurst(channel = 'center') {
+            const isLeft = channel === 'throttle' || channel === 'yaw' || channel === 'left';
+            const burst = document.getElementById(isLeft ? 'guide-left-burst' : 'guide-right-burst');
+            const position = channel === 'throttle' || channel === 'pitch'
+                ? { left: 50, top: 10 }
+                : channel === 'yaw' || channel === 'roll'
+                    ? { left: 90, top: 50 }
+                    : { left: 50, top: 50 };
+            burst.style.left = `${position.left}%`;
+            burst.style.top = `${position.top}%`;
+            burst.replaceChildren();
+            for (let i = 0; i < 14; i++) {
+                const particle = document.createElement('span');
+                particle.className = 'guide-particle';
+                particle.style.setProperty('--angle', `${(360 / 14) * i}deg`);
+                particle.style.setProperty('--distance', `${18 + Math.random() * 18}px`);
+                burst.appendChild(particle);
+            }
+            setTimeout(() => burst.replaceChildren(), 650);
+        }
+
+        function triggerBothGuideBursts() {
+            triggerGuideBurst('left');
+            triggerGuideBurst('right');
+        }
+
+        function stopCalibration(completed = false) {
+            isCalibrating = false;
+            calibrationWizard.step = 0;
+            const button = document.getElementById('calib-btn');
+            const nextButton = document.getElementById('calib-next-btn');
+            const guideSticks = document.getElementById('guide-sticks');
+            const statusBox = document.getElementById('calib-status');
+            button.innerText = '開始引導設定與校正';
+            button.style.background = '#FF8C00';
+            nextButton.innerText = '搖桿已置中，開始設定';
+            nextButton.style.display = 'none';
+            nextButton.disabled = false;
+            guideSticks.style.display = 'none';
+            if (completed) {
+                statusBox.style.display = 'block';
+                statusBox.innerHTML = `<div class="calib-instruction" style="color:#39FF14;">✅ 通道設定與搖桿校正完成</div><div class="calib-detail">可直接操作，或使用上方選單手動微調。</div>${calibrationProgressHtml(7)}`;
+            } else {
+                statusBox.style.display = 'none';
+            }
+        }
+
+        document.getElementById('calib-btn').addEventListener('click', (e) => {
+            if (isCalibrating) {
+                stopCalibration(false);
+                return;
+            }
+            isCalibrating = true;
+            calibrationWizard = { step: 1, centers: [], assigned: [], stableTime: 0, lastAxes: null, candidateAxis: null, candidateTime: 0, transitioning: false };
+            e.target.innerText = '取消引導設定';
+            e.target.style.background = '#B22222';
+            document.getElementById('guide-sticks').style.display = 'flex';
+            document.getElementById('calib-next-btn').innerText = '搖桿已置中，開始設定';
+            document.getElementById('calib-next-btn').style.display = 'block';
+            showCalibrationStep(1, '將左右搖桿置中', '確認兩個搖桿都在中心後，按下「搖桿已置中，開始設定」。');
+        });
+
+        document.getElementById('calib-next-btn').addEventListener('click', () => {
+            if (!isCalibrating) return;
+            if (calibrationWizard.step === 6) {
+                if (calibrationWizard.transitioning) return;
+                calibrationWizard.transitioning = true;
+                document.getElementById('calib-next-btn').disabled = true;
+                triggerBothGuideBursts();
+                showCalibrationStep(6, '校正完成', '已記錄搖桿最大值與最小值。');
+                setTimeout(() => {
+                    if (isCalibrating && calibrationWizard.step === 6) stopCalibration(true);
+                }, 550);
+                return;
+            }
+            if (calibrationWizard.step !== 1) return;
+            const pad = Array.from(navigator.getGamepads()).find(gamepad => gamepad !== null);
+            if (!pad) {
+                showCalibrationStep(1, '尚未偵測到控制器', '請先連接控制器，再將左右搖桿置中。');
+                return;
+            }
+            const axes = Array.from(pad.axes).slice(0, 6);
+            if (axes.length < 4) {
+                showCalibrationStep(1, '控制器軸數不足', '至少需要偵測到 4 個搖桿軸。');
+                return;
+            }
+            calibrationWizard.centers = axes.slice();
+            gamePadCalib = axes.map(center => ({ min: center, max: center, center }));
+            calibrationWizard.transitioning = true;
+            calibrationWizard.lastAxes = axes.slice();
+            calibrationWizard.stableTime = 0;
+            document.getElementById('calib-next-btn').disabled = true;
+            triggerBothGuideBursts();
+            showCalibrationStep(1, '中心位置已記錄', '準備進入油門通道設定。');
+            setTimeout(() => {
+                if (!isCalibrating || calibrationWizard.step !== 1) return;
+                calibrationWizard.step = 2;
+                calibrationWizard.transitioning = false;
+                const nextButton = document.getElementById('calib-next-btn');
+                nextButton.style.display = 'none';
+                nextButton.disabled = false;
+                showCalibrationStep(2, calibrationChannels[0].instruction, '推到底並短暫保持，系統會自動辨識變化最大的軸。');
+            }, 550);
+        });
+
+        function getCalibratedAxis(pad, idx) {
+            if (!pad || pad.axes[idx] === undefined) return 0;
+            const raw = pad.axes[idx];
+            const cal = gamePadCalib[idx];
+            if (!cal || cal.center === undefined || cal.max - cal.min <= 0.1) return raw;
+            const denominator = raw >= cal.center ? cal.max - cal.center : cal.center - cal.min;
+            if (denominator <= 0.05) return raw - cal.center;
+            return Math.max(-1, Math.min(1, (raw - cal.center) / denominator));
+        }
+
+        function setStickDot(dotId, x, y) {
+            const dot = document.getElementById(dotId);
+            const clampedX = Math.max(-1, Math.min(1, x || 0));
+            const clampedY = Math.max(-1, Math.min(1, y || 0));
+            dot.style.transform = `translate(calc(-50% + ${clampedX * 35}px), calc(-50% - ${clampedY * 35}px))`;
+        }
+
+        function updateStickVisuals(pad) {
+            if (!pad) {
+                setStickDot('left-stick-dot', 0, 0);
+                setStickDot('right-stick-dot', 0, 0);
+                return;
+            }
+            const yaw = getCalibratedAxis(pad, gamePadMap.yaw) * gamePadInvert.yaw;
+            const throttle = getCalibratedAxis(pad, gamePadMap.throttle) * gamePadInvert.throttle;
+            const roll = getCalibratedAxis(pad, gamePadMap.roll) * gamePadInvert.roll;
+            const pitch = getCalibratedAxis(pad, gamePadMap.pitch) * gamePadInvert.pitch;
+            setStickDot('left-stick-dot', yaw, throttle);
+            setStickDot('right-stick-dot', roll, pitch);
+        }
+
+        function updateCalibrationWizard(pad, dt) {
+            if (calibrationWizard.transitioning) return;
+            const axes = Array.from(pad.axes).slice(0, 6);
+            if (axes.length < 4) {
+                showCalibrationStep(calibrationWizard.step || 1, '控制器軸數不足', '至少需要偵測到 4 個搖桿軸。');
+                return;
+            }
+
+            if (calibrationWizard.step === 1) {
+                showCalibrationStep(1, '將左右搖桿置中', '確認兩個搖桿都在中心後，按下「搖桿已置中，開始設定」。');
+                return;
+            }
+
+            axes.forEach((value, i) => {
+                if (!gamePadCalib[i]) gamePadCalib[i] = { min: value, max: value, center: calibrationWizard.centers[i] ?? 0 };
+                gamePadCalib[i].min = Math.min(gamePadCalib[i].min, value);
+                gamePadCalib[i].max = Math.max(gamePadCalib[i].max, value);
+            });
+
+            if (calibrationWizard.step >= 2 && calibrationWizard.step <= 5) {
+                const config = calibrationChannels[calibrationWizard.step - 2];
+                let bestAxis = -1;
+                let bestDelta = 0;
+                axes.forEach((value, i) => {
+                    if (calibrationWizard.assigned.includes(i)) return;
+                    const delta = Math.abs(value - (calibrationWizard.centers[i] ?? 0));
+                    if (delta > bestDelta) { bestDelta = delta; bestAxis = i; }
+                });
+
+                showCalibrationStep(calibrationWizard.step, config.instruction, '推到底並短暫保持，系統會自動辨識變化最大的軸。');
+                if (bestAxis >= 0 && bestDelta >= 0.55) {
+                    if (calibrationWizard.candidateAxis === bestAxis) calibrationWizard.candidateTime += dt;
+                    else { calibrationWizard.candidateAxis = bestAxis; calibrationWizard.candidateTime = 0; }
+
+                    if (calibrationWizard.candidateTime >= 0.3) {
+                        const signedDelta = axes[bestAxis] - (calibrationWizard.centers[bestAxis] ?? 0);
+                        gamePadMap[config.channel] = bestAxis;
+                        gamePadInvert[config.channel] = signedDelta >= 0 ? 1 : -1;
+                        document.getElementById(`map-${config.channel}`).value = String(bestAxis);
+                        calibrationWizard.assigned.push(bestAxis);
+                        const completedStep = calibrationWizard.step;
+                        calibrationWizard.transitioning = true;
+                        calibrationWizard.candidateAxis = null;
+                        calibrationWizard.candidateTime = 0;
+                        triggerGuideBurst(config.channel);
+                        showCalibrationStep(completedStep, '通道辨識完成', '準備進入下一步。');
+                        setTimeout(() => {
+                            if (!isCalibrating || calibrationWizard.step !== completedStep) return;
+                            calibrationWizard.step = completedStep + 1;
+                            calibrationWizard.transitioning = false;
+                            if (calibrationWizard.step === 6) {
+                                const finishButton = document.getElementById('calib-next-btn');
+                                finishButton.innerText = '完成校正';
+                                finishButton.disabled = false;
+                                finishButton.style.display = 'block';
+                                showCalibrationStep(6, '將左右搖桿推至所有角落', '系統會持續讀取最大值與最小值，完成後請按下「完成校正」。');
+                            } else {
+                                const nextConfig = calibrationChannels[calibrationWizard.step - 2];
+                                showCalibrationStep(calibrationWizard.step, nextConfig.instruction, '推到底並短暫保持，系統會自動辨識變化最大的軸。');
+                            }
+                        }, 550);
+                    }
+                } else {
+                    calibrationWizard.candidateAxis = null;
+                    calibrationWizard.candidateTime = 0;
+                }
+                return;
+            }
+
+            if (calibrationWizard.step === 6) {
+                let capturedDirections = 0;
+                calibrationWizard.assigned.forEach(axis => {
+                    const cal = gamePadCalib[axis];
+                    if (cal.center - cal.min >= 0.55) capturedDirections++;
+                    if (cal.max - cal.center >= 0.55) capturedDirections++;
+                });
+                showCalibrationStep(6, '將左右搖桿推至所有角落', `系統會持續讀取最大值與最小值；目前已取得 ${capturedDirections}/8 個方向極限。完成後請按下「完成校正」。`);
+            }
         }
 
         const clock = new THREE.Clock();
@@ -675,30 +1028,18 @@
                 if (pad) {
                     if (pad.buttons.some(b => b.pressed)) unlockAudio();
                     document.getElementById('gamepad-status').innerText = `🎮 ${pad.id.substring(0, 20)}`; document.getElementById('gamepad-status').style.color = "#00FF00";
-                    
-                    if (isCalibrating) {
-                        let htmlStr = `<span style='color:#FFF;'>請緩慢將遙控器各搖桿推至最邊緣：</span><br><br>`;
-                        for(let i=0; i<pad.axes.length && i<6; i++) {
-                            let val = pad.axes[i];
-                            if(gamePadCalib[i].min === 99) gamePadCalib[i].min = val; // init
-                            if(val < gamePadCalib[i].min) gamePadCalib[i].min = val; 
-                            if(val > gamePadCalib[i].max) gamePadCalib[i].max = val;
-                        }
-                        const axesNames = { [gamePadMap.roll]: "Roll(左右)", [gamePadMap.pitch]: "Pitch(前後)", [gamePadMap.throttle]: "Throttle(升降)", [gamePadMap.yaw]: "Yaw(轉向)" };
-                        for(let i=0; i<4; i++) {
-                            let idx = [gamePadMap.roll, gamePadMap.pitch, gamePadMap.throttle, gamePadMap.yaw][i];
-                            let name = axesNames[idx];
-                            if(pad.axes[idx] !== undefined) {
-                                htmlStr += `${name} [軸${idx}]: 目前 ${pad.axes[idx].toFixed(2)} | 區間 [${gamePadCalib[idx].min.toFixed(2)}, ${gamePadCalib[idx].max.toFixed(2)}]<br>`;
-                            }
-                        }
-                        document.getElementById('calib-status').innerHTML = htmlStr;
-                    }
+                    updateStickVisuals(pad);
+                    if (isCalibrating) updateCalibrationWizard(pad, dt);
 
-                    let rawRoll = getCalibratedAxis(pad, gamePadMap.roll); let rawPitch = getCalibratedAxis(pad, gamePadMap.pitch); let rawThrottle = getCalibratedAxis(pad, gamePadMap.throttle); let rawYaw = getCalibratedAxis(pad, gamePadMap.yaw);
+                    let rawRoll = getCalibratedAxis(pad, gamePadMap.roll) * gamePadInvert.roll; let rawPitch = getCalibratedAxis(pad, gamePadMap.pitch) * gamePadInvert.pitch; let rawThrottle = getCalibratedAxis(pad, gamePadMap.throttle) * gamePadInvert.throttle; let rawYaw = getCalibratedAxis(pad, gamePadMap.yaw) * gamePadInvert.yaw;
                     const deadzone = 0.08; const verticalDeadzone = 0.15; 
                     targetYaw = Math.abs(rawYaw) > deadzone ? rawYaw : 0; targetThrottle = Math.abs(rawThrottle) > verticalDeadzone ? rawThrottle : 0; targetRoll = Math.abs(rawRoll) > deadzone ? rawRoll : 0; targetPitch = Math.abs(rawPitch) > deadzone ? rawPitch : 0;
-                } else { document.getElementById('gamepad-status').innerText = "未連接控制器"; document.getElementById('gamepad-status').style.color = "#FF6347"; }
+                    if (isCalibrating) targetThrottle = targetYaw = targetPitch = targetRoll = 0;
+                } else {
+                    updateStickVisuals(null);
+                    document.getElementById('gamepad-status').innerText = "未連接控制器"; document.getElementById('gamepad-status').style.color = "#FF6347";
+                    if (isCalibrating) showCalibrationStep(calibrationWizard.step || 1, '尚未偵測到控制器', '請連接控制器後再依畫面指示操作。');
+                }
 
                 if ((mission.id === 'adv_g1' || mission.id === 'adv_g2' || mission.id === 'adv_g3') && mission.autoPilot) {
                     targetThrottle = 0; targetYaw = 0; targetPitch = 0; targetRoll = 0; currentVelocity = { throttle: 0, yaw: 0, pitch: 0, roll: 0 };
@@ -987,6 +1328,133 @@
                         // ------------------------------------------
                         // ★ 基本級：側邊懸停前進後退
                         // ------------------------------------------
+                        else if (mission.id === 'adv_rect') {
+                            const rectHeightValid = Math.abs(curH - 1.8) <= 0.3;
+                            const rectPositionValid = (point) => Math.hypot(
+                                droneGroup.position.x - point.x,
+                                droneGroup.position.z - point.z
+                            ) <= 1.5;
+                            const rectYawValid = (yaw) => Math.abs(normalizeAngle(curYaw - yaw)) <= THREE.MathUtils.degToRad(15);
+                            const rectHoverYawValid = (yaw) => Math.abs(normalizeAngle(curYaw - yaw)) <= THREE.MathUtils.degToRad(30);
+                            const rectPointName = (point) => point === P.H ? 'H點' : point === P.P1 ? 'P1角錐' : point === P.P3 ? 'P3角錐' : point === P.P5 ? 'P5角錐' : 'P7角錐';
+                            const rectFaceName = (yaw) => yaw === 0 ? '12點鐘' : yaw === Math.PI / 2 ? '9點鐘' : yaw === -Math.PI / 2 ? '3點鐘' : '6點鐘';
+                            const rectSteps = {
+                                1:  { type: 'hover', point: P.H, yaw: 0 },
+                                2:  { type: 'turn', point: P.H, yaw: Math.PI / 2 },
+                                3:  { type: 'hover', point: P.P3, yaw: Math.PI / 2 },
+                                4:  { type: 'turn', point: P.P3, yaw: 0 },
+                                5:  { type: 'hover', point: P.P1, yaw: 0 },
+                                6:  { type: 'turn', point: P.P1, yaw: -Math.PI / 2 },
+                                7:  { type: 'hover', point: P.P5, yaw: -Math.PI / 2 },
+                                8:  { type: 'turn', point: P.P5, yaw: Math.PI },
+                                9:  { type: 'hover', point: P.P7, yaw: Math.PI },
+                                10: { type: 'turn', point: P.P7, yaw: Math.PI / 2 },
+                                13: { type: 'turn', point: P.P7, yaw: 0 },
+                                14: { type: 'hover', point: P.P5, yaw: 0 },
+                                15: { type: 'turn', point: P.P5, yaw: Math.PI / 2 },
+                                16: { type: 'hover', point: P.P1, yaw: Math.PI / 2 },
+                                17: { type: 'turn', point: P.P1, yaw: Math.PI },
+                                18: { type: 'hover', point: P.P3, yaw: Math.PI },
+                                19: { type: 'turn', point: P.P3, yaw: -Math.PI / 2 },
+                                20: { type: 'arrive', point: P.H },
+                                21: { type: 'finishTurn', point: P.H, yaw: 0 }
+                            };
+
+                            if (mission.step === 11) {
+                                // 原考試項目的第 11 點是「轉向9點鐘」，已於第 10 步完成；保留編號後直接進入第 12 步。
+                                mission.step = 12;
+                                mission.rectPhase = 'toH';
+                                mission.timer = 5.0;
+                            }
+
+                            if (mission.step === 12) {
+                                if (!mission.rectPhase) mission.rectPhase = 'toH';
+
+                                if (mission.rectPhase === 'toH') {
+                                    targetRing.visible = true;
+                                    targetRing.position.set(P.H.x, 0.03, P.H.z);
+                                    mStatus = `<span style="color:#00BFFF;">矩形航線 12/21</span><br>前往H點上方`;
+                                    if (rectPositionValid(P.H) && rectHeightValid) {
+                                        mission.rectPhase = 'rightTurn';
+                                        mission.rectRightTurn = 0;
+                                        mission.rectLastYaw = curYaw;
+                                    }
+                                } else if (mission.rectPhase === 'rightTurn') {
+                                    targetRing.visible = true;
+                                    targetRing.position.set(P.H.x, 0.03, P.H.z);
+                                    const yawDelta = normalizeAngle(curYaw - (mission.rectLastYaw ?? curYaw));
+                                    mission.rectLastYaw = curYaw;
+                                    if (yawDelta < 0) mission.rectRightTurn += -yawDelta;
+                                    mStatus = `<span style="color:#00BFFF;">矩形航線 12/21</span><br>於H點上方向右旋轉180度`;
+
+                                    if (!rectPositionValid(P.H) || !rectHeightValid) {
+                                        mission.rectRightTurn = 0;
+                                        mStatus += `<br><span style="color:#FF4444;">請保持於H點上方1.8m</span>`;
+                                    } else if (mission.rectRightTurn >= THREE.MathUtils.degToRad(165) && rectYawValid(-Math.PI / 2)) {
+                                        mission.rectPhase = 'returnP7';
+                                        mission.timer = 5.0;
+                                    }
+                                } else {
+                                    targetRing.visible = true;
+                                    targetRing.position.set(P.P7.x, 0.03, P.P7.z);
+                                    if (!rectPositionValid(P.P7) || !rectHeightValid) {
+                                        mission.timer = 5.0;
+                                        mStatus = `<span style="color:#00BFFF;">矩形航線 12/21</span><br>返回P7角錐上方1.8m`;
+                                    } else if (!rectHoverYawValid(-Math.PI / 2)) {
+                                        mission.timer = 5.0;
+                                        mStatus = `<span style="color:#00BFFF;">矩形航線 12/21</span><br><span style="color:#FF4444;">請保持機頭朝向3點鐘方向</span>`;
+                                    } else {
+                                        mission.timer -= dt;
+                                        mStatus = `<span style="color:#00BFFF;">矩形航線 12/21</span><br>P7角錐上方保持懸停 <span style="color:#39FF14;">${Math.ceil(mission.timer)} 秒</span>`;
+                                        if (mission.timer <= 0) {
+                                            mission.step = 13;
+                                            mission.timer = 5.0;
+                                            mission.rectPhase = null;
+                                        }
+                                    }
+                                }
+                            } else {
+                                const rectStep = rectSteps[mission.step];
+                                if (rectStep) {
+                                    targetRing.visible = true;
+                                    targetRing.position.set(rectStep.point.x, 0.03, rectStep.point.z);
+                                    const pointName = rectPointName(rectStep.point);
+
+                                    if (rectStep.type === 'hover') {
+                                        if (!rectPositionValid(rectStep.point) || !rectHeightValid) {
+                                            mission.timer = 5.0;
+                                            mStatus = `<span style="color:#00BFFF;">矩形航線 ${mission.step}/21</span><br>前往${pointName}上方1.8m`;
+                                        } else if (!rectHoverYawValid(rectStep.yaw)) {
+                                            mission.timer = 5.0;
+                                            mStatus = `<span style="color:#00BFFF;">矩形航線 ${mission.step}/21</span><br><span style="color:#FF4444;">請保持機頭朝向${rectFaceName(rectStep.yaw)}方向</span>`;
+                                        } else {
+                                            mission.timer -= dt;
+                                            mStatus = `<span style="color:#00BFFF;">矩形航線 ${mission.step}/21</span><br>${pointName}上方保持懸停 <span style="color:#39FF14;">${Math.ceil(mission.timer)} 秒</span>`;
+                                            if (mission.timer <= 0) {
+                                                mission.step++;
+                                                mission.timer = 5.0;
+                                            }
+                                        }
+                                    } else if (rectStep.type === 'turn' || rectStep.type === 'finishTurn') {
+                                        if (!rectPositionValid(rectStep.point) || !rectHeightValid) {
+                                            mStatus = `<span style="color:#00BFFF;">矩形航線 ${mission.step}/21</span><br>請保持於${pointName}上方1.8m`;
+                                        } else {
+                                            mStatus = `<span style="color:#00BFFF;">矩形航線 ${mission.step}/21</span><br>轉向${rectFaceName(rectStep.yaw)}方向`;
+                                            if (rectYawValid(rectStep.yaw)) {
+                                                if (rectStep.type === 'finishTurn') completeMission();
+                                                else {
+                                                    mission.step++;
+                                                    mission.timer = 5.0;
+                                                }
+                                            }
+                                        }
+                                    } else if (rectStep.type === 'arrive') {
+                                        mStatus = `<span style="color:#00BFFF;">矩形航線 20/21</span><br>前往H點上方1.8m`;
+                                        if (rectPositionValid(P.H) && rectHeightValid) mission.step = 21;
+                                    }
+                                }
+                            }
+                        }
                         else if (mission.id === 'emergency') {
                             const eastWind = mission.emergencyWindFrom === 'east';
                             const entryPoint = eastWind ? P.P7 : P.P3;
@@ -1265,7 +1733,7 @@
                     }
                     // 更新中央文字顯示
                     // completeMission() 會在同一幀切換為完成狀態；此時不可再用最後一步提示覆蓋結算畫面。
-                    if (mStatus !== "" && mission.active && !mission.completed) { centerMsg.innerHTML = mStatus; }
+                    if (mStatus !== "" && mission.active && !mission.completed) { centerMsg.innerHTML = normalizeMissionPrompt(mStatus); }
                 }
             } // END OF if(!isPaused) BLOCK
 
@@ -1274,14 +1742,18 @@
             else { hMat.color.setHex(0x333333); hMat.emissive.setHex(0x000000); hMat.emissiveIntensity = 0; }
 
             if (isAudioInitialized && audioCtx.state === 'running') {
-                motorOscillators.forEach((osc, i) => osc.frequency.setTargetAtTime(50 + (Math.abs(currentVelocity.throttle)*80) + (i*2), audioCtx.currentTime, 0.1));
-                if (!isAudioMuted && !isPaused) { masterGain.gain.setTargetAtTime(Math.min(((droneGroup.position.y <= droneYOffset + 0.01 ? 0.1 : 0.3) + Math.abs(currentVelocity.throttle)*0.6) * (7.0 / Math.max(camera.position.distanceTo(droneGroup.position), 2.0)), 1.2), audioCtx.currentTime, 0.1); } 
+                const throttleSound = currentVelocity.throttle;
+                // 懸停為基準音；升油門提高轉速與音量，降油門則降低轉速與音量。
+                const motorFrequency = 50 + Math.max(0, throttleSound) * 110 + Math.min(0, throttleSound) * 20;
+                motorOscillators.forEach((osc, i) => osc.frequency.setTargetAtTime(motorFrequency + (i * 2), audioCtx.currentTime, 0.1));
+                const airborneBaseVolume = droneGroup.position.y <= droneYOffset + 0.01 ? 0.1 : 0.3;
+                const throttleVolume = throttleSound >= 0 ? throttleSound * 0.75 : throttleSound * 0.13;
+                if (!isAudioMuted && !isPaused) { masterGain.gain.setTargetAtTime(Math.max(0.03, Math.min((airborneBaseVolume + throttleVolume) * (7.0 / Math.max(camera.position.distanceTo(droneGroup.position), 2.0)), 1.2)), audioCtx.currentTime, 0.1); } 
                 else masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
             }
 
-            document.getElementById('telemetry-box').innerText = JSON.stringify({ velocity: { t: parseFloat(currentVelocity.throttle.toFixed(3)), y: parseFloat(currentVelocity.yaw.toFixed(3)), p: parseFloat(currentVelocity.pitch.toFixed(3)), r: parseFloat(currentVelocity.roll.toFixed(3)) } }, null, 2);
             let propSpin = isPaused ? 0 : 0.1 + Math.abs(currentVelocity.throttle) * 0.8; propellers.forEach(p => p.rotation.y -= propSpin); proxyPropellers.forEach(p => p.rotation.y -= propSpin);
-            document.getElementById('altitude').innerText = (droneGroup.position.y - droneYOffset).toFixed(2); document.getElementById('pos-x').innerText = droneGroup.position.x.toFixed(2); document.getElementById('pos-z').innerText = droneGroup.position.z.toFixed(2);
+            document.getElementById('altitude').innerText = (droneGroup.position.y - droneYOffset).toFixed(2);
             
             proxyDroneYaw.rotation.y = droneGroup.rotation.y; proxyDroneTilt.rotation.x = droneTiltGroup.rotation.x; proxyDroneTilt.rotation.z = droneTiltGroup.rotation.z; attitudeRenderer.render(attitudeScene, attitudeCamera);
 
