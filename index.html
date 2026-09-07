@@ -99,6 +99,9 @@
         }
         #settings-modal h2 { margin-top: 0; color: #00BFFF; border-bottom: 1px solid #555; padding-bottom: 10px; text-align: center;}
         .settings-section-title { margin: 12px 0 8px; color: #FFD700; font-weight: bold; font-size: 14px; }
+        .settings-section-header { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin: 12px 0 8px; }
+        .settings-section-header .settings-section-title { margin: 0; }
+        .settings-section-header select { min-width: 190px; padding: 7px 9px; border: 1px solid #688; border-radius: 4px; background: #263238; color: #FFF; cursor: pointer; }
         .mapping-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .setting-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; padding: 9px 10px; font-size: 14px; background: rgba(255,255,255,0.055); border: 1px solid #444; border-radius: 6px; }
         .setting-row small { grid-column: 1 / -1; color: #999; }
@@ -130,9 +133,13 @@
         .guide-dot { position: absolute; z-index: 2; left: 50%; top: 50%; width: 15px; height: 15px; border: 2px solid #D8FFD8; border-radius: 50%; background: #39FF14; box-shadow: 0 0 13px #39FF14; transform: translate(-50%, -50%); }
         .guide-dot.move-up { animation: guideMoveUp 1s ease-in-out infinite; }
         .guide-dot.move-right { animation: guideMoveRight 1s ease-in-out infinite; }
+        .guide-dot.return-up { animation: guideReturnUp 1s ease-in-out infinite; }
+        .guide-dot.return-right { animation: guideReturnRight 1s ease-in-out infinite; }
         .guide-dot.move-corners { animation: guideMoveCorners 2.4s ease-in-out infinite; }
         @keyframes guideMoveUp { 0%, 12% { left: 50%; top: 50%; } 72%, 100% { left: 50%; top: 10%; } }
         @keyframes guideMoveRight { 0%, 12% { left: 50%; top: 50%; } 72%, 100% { left: 90%; top: 50%; } }
+        @keyframes guideReturnUp { 0%, 12% { left: 50%; top: 10%; } 72%, 100% { left: 50%; top: 50%; } }
+        @keyframes guideReturnRight { 0%, 12% { left: 90%; top: 50%; } 72%, 100% { left: 50%; top: 50%; } }
         @keyframes guideMoveCorners { 0% { left: 50%; top: 50%; } 18% { left: 10%; top: 10%; } 38% { left: 90%; top: 10%; } 58% { left: 90%; top: 90%; } 78% { left: 10%; top: 90%; } 100% { left: 50%; top: 50%; } }
         .guide-burst { position: absolute; z-index: 5; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
         .guide-particle { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #39FF14; box-shadow: 0 0 7px #39FF14; animation: guideParticleBurst .55s ease-out forwards; }
@@ -187,7 +194,7 @@
 
     <div id="settings-modal">
         <h2>⚙️ 搖桿設定與校正</h2>
-        <div class="settings-section-title">手動通道設定</div>
+        <div class="settings-section-header"><div class="settings-section-title">手動通道設定</div><select id="control-mode" aria-label="MODE 選擇"><option value="1">MODE 1（日本手）</option><option value="2" selected>MODE 2（美國手）</option><option value="3">MODE 3（中國手）</option></select></div>
         <div class="mapping-grid">
             <label class="setting-row"><span>油門（上下）</span><select id="map-throttle"><option value="0">軸 0</option><option value="1">軸 1</option><option value="2" selected>軸 2</option><option value="3">軸 3</option><option value="4">軸 4</option><option value="5">軸 5</option></select><small>控制機體升降</small></label>
             <label class="setting-row"><span>偏航（左右）</span><select id="map-yaw"><option value="0">軸 0</option><option value="1">軸 1</option><option value="2">軸 2</option><option value="3" selected>軸 3</option><option value="4">軸 4</option><option value="5">軸 5</option></select><small>控制機頭轉向</small></label>
@@ -234,7 +241,7 @@
             <strong>[ C ]</strong> 切換視角 | <strong>[ ↑ ] / [ ↓ ]</strong> 調整視角高度 | <strong>[ I ] / [ O ] 或 [ 滾輪 ]</strong> 調整焦距<br>
             <strong>[ A ] / [ Z ]</strong> 調整雲台仰俯角（FPV 模式）<br>
             <strong>[ M ]</strong> 開啟／關閉靜音 | <strong>[ 0–9 ]</strong> 設定風力 | <strong>[ R ]</strong> 重置位置<br>
-            <strong>[ ESC ]</strong> 開啟搖桿設定與校正面板
+            <strong>[ F10 ]</strong> 切換全螢幕模式 | <strong>[ ESC ]</strong> 開啟搖桿設定與校正面板
         </div>
     </div>
 
@@ -631,6 +638,14 @@
         window.addEventListener('keyup', (e) => { if (e.key.toLowerCase() === 'a') keyState.a = false; if (e.key.toLowerCase() === 'z') keyState.z = false; });
         window.addEventListener('keydown', (e) => {
             const keyL = e.key.toLowerCase();
+            if (e.key === 'F10') {
+                e.preventDefault();
+                if (!navigator.userAgent.includes('Electron')) {
+                    const fullscreenAction = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+                    if (fullscreenAction?.catch) fullscreenAction.catch(() => {});
+                }
+                return;
+            }
             if (e.key === 'Escape') { 
                 const modal = document.getElementById('settings-modal'); modal.style.display = modal.style.display === 'block' ? 'none' : 'block'; 
                 if (modal.style.display === 'none' && isCalibrating) stopCalibration(false);
@@ -752,8 +767,14 @@
         let gamePadMap = { roll: 0, pitch: 1, throttle: 2, yaw: 3 };
         let gamePadInvert = { roll: 1, pitch: 1, throttle: 1, yaw: 1 };
         let gamePadCalib = Array.from({ length: 6 }, () => ({ min: 0, max: 0, center: 0 }));
+        let controlMode = 2;
+        const controlModeLayouts = {
+            1: { left: { x: 'yaw', y: 'pitch' }, right: { x: 'roll', y: 'throttle' } },
+            2: { left: { x: 'yaw', y: 'throttle' }, right: { x: 'roll', y: 'pitch' } },
+            3: { left: { x: 'roll', y: 'throttle' }, right: { x: 'yaw', y: 'pitch' } }
+        };
         let isCalibrating = false;
-        let calibrationWizard = { step: 0, centers: [], assigned: [], stableTime: 0, lastAxes: null, candidateAxis: null, candidateTime: 0, transitioning: false };
+        let calibrationWizard = { step: 0, centers: [], assigned: [], stableTime: 0, lastAxes: null, candidateAxis: null, candidateTime: 0, transitioning: false, awaitingCenter: false, returnAxis: null, returnChannel: null };
         const calibrationChannels = [
             { channel: 'throttle', instruction: '將油門軸向上推到底' },
             { channel: 'yaw', instruction: '將偏航軸向右推到底' },
@@ -767,6 +788,20 @@
                 gamePadInvert[ch] = 1;
             });
         });
+
+        document.getElementById('control-mode').addEventListener('change', (e) => {
+            controlMode = parseInt(e.target.value);
+            if (isCalibrating) updateGuideAnimation(calibrationWizard.step);
+        });
+
+        function getModeGuideTarget(channel) {
+            const layout = controlModeLayouts[controlMode];
+            for (const stick of ['left', 'right']) {
+                if (layout[stick].x === channel) return { stick, movement: 'right' };
+                if (layout[stick].y === channel) return { stick, movement: 'up' };
+            }
+            return { stick: 'left', movement: 'right' };
+        }
 
         function calibrationProgressHtml(step) {
             return `<div class="calib-progress">${Array.from({ length: 6 }, (_, i) => `<span class="${i + 1 < step ? 'done' : i + 1 === step ? 'active' : ''}"></span>`).join('')}</div>`;
@@ -784,10 +819,15 @@
             const rightDot = document.getElementById('guide-right-dot');
             let leftClass = 'guide-dot';
             let rightClass = 'guide-dot';
-            if (step === 2) leftClass += ' move-up';
-            if (step === 3) leftClass += ' move-right';
-            if (step === 4) rightClass += ' move-up';
-            if (step === 5) rightClass += ' move-right';
+            if (step >= 2 && step <= 5) {
+                const channel = calibrationChannels[step - 2].channel;
+                const target = getModeGuideTarget(channel);
+                const animation = calibrationWizard.awaitingCenter
+                    ? `return-${target.movement}`
+                    : `move-${target.movement}`;
+                if (target.stick === 'left') leftClass += ` ${animation}`;
+                else rightClass += ` ${animation}`;
+            }
             if (step === 6) {
                 leftClass += ' move-corners';
                 rightClass += ' move-corners';
@@ -796,14 +836,18 @@
             if (rightDot.className !== rightClass) rightDot.className = rightClass;
         }
 
-        function triggerGuideBurst(channel = 'center') {
-            const isLeft = channel === 'throttle' || channel === 'yaw' || channel === 'left';
-            const burst = document.getElementById(isLeft ? 'guide-left-burst' : 'guide-right-burst');
-            const position = channel === 'throttle' || channel === 'pitch'
-                ? { left: 50, top: 10 }
-                : channel === 'yaw' || channel === 'roll'
-                    ? { left: 90, top: 50 }
-                    : { left: 50, top: 50 };
+        function triggerGuideBurst(channel = 'center', atCenter = false) {
+            const target = channel === 'left' || channel === 'right'
+                ? { stick: channel, movement: 'center' }
+                : channel === 'center'
+                    ? { stick: 'left', movement: 'center' }
+                    : getModeGuideTarget(channel);
+            const burst = document.getElementById(target.stick === 'left' ? 'guide-left-burst' : 'guide-right-burst');
+            const position = atCenter || target.movement === 'center'
+                ? { left: 50, top: 50 }
+                : target.movement === 'up'
+                    ? { left: 50, top: 10 }
+                    : { left: 90, top: 50 };
             burst.style.left = `${position.left}%`;
             burst.style.top = `${position.top}%`;
             burst.replaceChildren();
@@ -849,7 +893,7 @@
                 return;
             }
             isCalibrating = true;
-            calibrationWizard = { step: 1, centers: [], assigned: [], stableTime: 0, lastAxes: null, candidateAxis: null, candidateTime: 0, transitioning: false };
+            calibrationWizard = { step: 1, centers: [], assigned: [], stableTime: 0, lastAxes: null, candidateAxis: null, candidateTime: 0, transitioning: false, awaitingCenter: false, returnAxis: null, returnChannel: null };
             e.target.innerText = '取消引導設定';
             e.target.style.background = '#B22222';
             document.getElementById('guide-sticks').style.display = 'flex';
@@ -928,8 +972,10 @@
             const throttle = getCalibratedAxis(pad, gamePadMap.throttle) * gamePadInvert.throttle;
             const roll = getCalibratedAxis(pad, gamePadMap.roll) * gamePadInvert.roll;
             const pitch = getCalibratedAxis(pad, gamePadMap.pitch) * gamePadInvert.pitch;
-            setStickDot('left-stick-dot', yaw, throttle);
-            setStickDot('right-stick-dot', roll, pitch);
+            const values = { yaw, throttle, roll, pitch };
+            const layout = controlModeLayouts[controlMode];
+            setStickDot('left-stick-dot', values[layout.left.x], values[layout.left.y]);
+            setStickDot('right-stick-dot', values[layout.right.x], values[layout.right.y]);
         }
 
         function updateCalibrationWizard(pad, dt) {
@@ -950,6 +996,40 @@
                 gamePadCalib[i].min = Math.min(gamePadCalib[i].min, value);
                 gamePadCalib[i].max = Math.max(gamePadCalib[i].max, value);
             });
+
+            if (calibrationWizard.awaitingCenter) {
+                const center = calibrationWizard.centers[calibrationWizard.returnAxis] ?? 0;
+                const centerDistance = Math.abs((axes[calibrationWizard.returnAxis] ?? center) - center);
+                calibrationWizard.stableTime = centerDistance <= 0.15 ? calibrationWizard.stableTime + dt : 0;
+                showCalibrationStep(calibrationWizard.step, '辨識完成，請將搖桿回中', '光點回到中心並保持片刻後，系統會進入下一步。');
+
+                if (calibrationWizard.stableTime >= 0.3) {
+                    const completedStep = calibrationWizard.step;
+                    calibrationWizard.transitioning = true;
+                    triggerGuideBurst(calibrationWizard.returnChannel, true);
+                    showCalibrationStep(completedStep, '搖桿已回中', '準備進入下一步。');
+                    setTimeout(() => {
+                        if (!isCalibrating || calibrationWizard.step !== completedStep) return;
+                        calibrationWizard.step = completedStep + 1;
+                        calibrationWizard.transitioning = false;
+                        calibrationWizard.awaitingCenter = false;
+                        calibrationWizard.returnAxis = null;
+                        calibrationWizard.returnChannel = null;
+                        calibrationWizard.stableTime = 0;
+                        if (calibrationWizard.step === 6) {
+                            const finishButton = document.getElementById('calib-next-btn');
+                            finishButton.innerText = '完成校正';
+                            finishButton.disabled = false;
+                            finishButton.style.display = 'block';
+                            showCalibrationStep(6, '將左右搖桿推至所有角落', '系統會持續讀取最大值與最小值，完成後請按下「完成校正」。');
+                        } else {
+                            const nextConfig = calibrationChannels[calibrationWizard.step - 2];
+                            showCalibrationStep(calibrationWizard.step, nextConfig.instruction, '推到底並短暫保持，系統會自動辨識變化最大的軸。');
+                        }
+                    }, 550);
+                }
+                return;
+            }
 
             if (calibrationWizard.step >= 2 && calibrationWizard.step <= 5) {
                 const config = calibrationChannels[calibrationWizard.step - 2];
@@ -972,27 +1052,13 @@
                         gamePadInvert[config.channel] = signedDelta >= 0 ? 1 : -1;
                         document.getElementById(`map-${config.channel}`).value = String(bestAxis);
                         calibrationWizard.assigned.push(bestAxis);
-                        const completedStep = calibrationWizard.step;
-                        calibrationWizard.transitioning = true;
+                        calibrationWizard.awaitingCenter = true;
+                        calibrationWizard.returnAxis = bestAxis;
+                        calibrationWizard.returnChannel = config.channel;
+                        calibrationWizard.stableTime = 0;
                         calibrationWizard.candidateAxis = null;
                         calibrationWizard.candidateTime = 0;
-                        triggerGuideBurst(config.channel);
-                        showCalibrationStep(completedStep, '通道辨識完成', '準備進入下一步。');
-                        setTimeout(() => {
-                            if (!isCalibrating || calibrationWizard.step !== completedStep) return;
-                            calibrationWizard.step = completedStep + 1;
-                            calibrationWizard.transitioning = false;
-                            if (calibrationWizard.step === 6) {
-                                const finishButton = document.getElementById('calib-next-btn');
-                                finishButton.innerText = '完成校正';
-                                finishButton.disabled = false;
-                                finishButton.style.display = 'block';
-                                showCalibrationStep(6, '將左右搖桿推至所有角落', '系統會持續讀取最大值與最小值，完成後請按下「完成校正」。');
-                            } else {
-                                const nextConfig = calibrationChannels[calibrationWizard.step - 2];
-                                showCalibrationStep(calibrationWizard.step, nextConfig.instruction, '推到底並短暫保持，系統會自動辨識變化最大的軸。');
-                            }
-                        }, 550);
+                        showCalibrationStep(calibrationWizard.step, '通道辨識完成，請將搖桿回中', '回到中心並保持片刻後，系統會進入下一步。');
                     }
                 } else {
                     calibrationWizard.candidateAxis = null;
